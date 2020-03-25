@@ -57,7 +57,8 @@ include "root.php";
 			public $app_name;
 			public $app_uuid;
 			public $domain_uuid;
-			private static $dbconn = null;
+			private static $dbconn = [];
+			private static $querycache = [];
 
 			/**
 			 * Called when the object is created
@@ -78,12 +79,24 @@ include "root.php";
 				}
 			}
 		
+			private function cache_prepare($sql) {
+				$cachename=$this->db_name??'fusionpbx';
+				if(!isset(self::$querycache[$cachename])){
+					self::$querycache[$cachename]=[];
+				}
+				if(!isset(self::$querycache[$cachename][$sql])){
+					self::$querycache[$cachename][$sql] = $this->db->prepare($sql);
+				}
+				return self::$querycache[$cachename][$sql];
+			}
 			/**
 			 * Connect to the database
 			 */
 			public function connect() {
-				if (self::$dbconn!==null){
-					$this->db = self::$dbconn;
+				$cachename=$this->db_name??'fusionpbx';
+				// If this connection isn't cached, connect and create a query cache
+				if (isset(self::$dbconn[$cachename])) {
+					$this->db = self::$dbconn[$cachename];
 					return;
 				}
 
@@ -226,9 +239,10 @@ include "root.php";
 							echo 'Connection failed: ' . $e->getMessage();
 						}
 				}
-				self::$dbconn = $this->db;
+				self::$dbconn[$cachename] = $this->db;
 			}
 
+			//Unused
 			public function tables() {
 				//connect to the database if needed
 					if (!$this->db) {
@@ -252,7 +266,7 @@ include "root.php";
 					if ($this->type == "mssql") {
 						$sql = "SELECT * FROM sys.Tables order by name asc";
 					}
-					$prep_statement = $this->db->prepare(check_sql($sql));
+					$prep_statement = $this->cache_prepare(check_sql($sql));
 					$prep_statement->execute();
 					$tmp = $prep_statement->fetchAll(PDO::FETCH_NAMED);
 					if ($this->type == "pgsql" || $this->type == "sqlite" || $this->type == "mssql") {
@@ -273,6 +287,7 @@ include "root.php";
 					return $result;
 			}
 
+			//Used only by the fields function which itself is unused
 			public function table_info() {
 				//public $db;
 				//public $type;
@@ -310,12 +325,13 @@ include "root.php";
 					if ($this->type == "mssql") {
 						$sql = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '".$this->table."'";
 					}
-					$prep_statement = $this->db->prepare($sql);
+					$prep_statement = $this->cache_prepare($sql);
 					$prep_statement->execute();
 				//set the result array
 					return $prep_statement->fetchAll(PDO::FETCH_ASSOC);
 			}
 
+			//Unused
 			public function fields() {
 				//public $db;
 				//public $type;
@@ -460,7 +476,7 @@ include "root.php";
 						$sql .= "offset ".$this->offset." ";
 					}
 
-					$prep_statement = $this->db->prepare($sql);
+					$prep_statement = $this->cache_prepare($sql);
 					if ($prep_statement) {
 						$prep_statement->execute($params);
 						$array = $prep_statement->fetchAll(PDO::FETCH_ASSOC);
@@ -485,7 +501,7 @@ include "root.php";
 
 				//execute the query, and return the results
 					try {
-						$prep_statement = $this->db->prepare($sql);
+						$prep_statement = $this->cache_prepare($sql);
 						if (is_array($parameters)) {
 							$prep_statement->execute($parameters);
 						}
@@ -589,7 +605,7 @@ include "root.php";
 					try {
 						//$this->sql = $sql;
 						//$this->db->exec($sql);
-						$prep_statement = $this->db->prepare($sql);
+						$prep_statement = $this->cache_prepare($sql);
 						$prep_statement->execute($params);
 					}
 					catch(PDOException $e) {
@@ -681,7 +697,7 @@ include "root.php";
 						}
 					}
 					//$this->db->exec(check_sql($sql));
-					$prep_statement = $this->db->prepare($sql);
+					$prep_statement = $this->cache_prepare($sql);
 					$prep_statement->execute($params);
 					unset($prep_statement);
 					unset($this->fields);
@@ -862,7 +878,7 @@ include "root.php";
 						}
 						$sql .= ":transaction_result ";
 						$sql .= ")";
-						$statement = $this->db->prepare($sql);
+						$statement = $this->cache_prepare($sql);
 						if (isset($user_uuid) && is_uuid($user_uuid)) {
 							$statement->bindParam(':user_uuid', $user_uuid);
 						}
@@ -938,7 +954,7 @@ include "root.php";
 						}
 					}
 					unset($this->where);
-					$prep_statement = $this->db->prepare($sql);
+					$prep_statement = $this->cache_prepare($sql);
 					if ($prep_statement) {
 						$prep_statement->execute($params);
 						$row = $prep_statement->fetch(PDO::FETCH_ASSOC);
@@ -965,7 +981,7 @@ include "root.php";
 
 				//execute the query, and return the results
 					try {
-						$prep_statement = $this->db->prepare($sql);
+						$prep_statement = $this->cache_prepare($sql);
 						if (is_array($parameters)) {
 							$prep_statement->execute($parameters);
 						}
@@ -1083,7 +1099,7 @@ include "root.php";
 					}
 				//execute the query, and return the results
 					try {
-						$prep_statement = $this->db->prepare($sql);
+						$prep_statement = $this->cache_prepare($sql);
 						$prep_statement->execute($params);
 						$message["message"] = "OK";
 						$message["code"] = "200";
@@ -1229,7 +1245,7 @@ include "root.php";
 								if ($parent_key_exists) {
 									$sql = "SELECT ".implode(", ", $parent_field_names)." FROM ".$table_name." ";
 									$sql .= "WHERE ".$parent_key_name." = '".$parent_key_value."' ";
-									$prep_statement = $this->db->prepare($sql);
+									$prep_statement = $this->cache_prepare($sql);
 									if ($prep_statement) {
 										//get the data
 											try {
@@ -1310,7 +1326,7 @@ include "root.php";
 
 											try {
 												//$this->db->query(check_sql($sql));
-												$prep_statement = $this->db->prepare($sql);
+												$prep_statement = $this->cache_prepare($sql);
 												$prep_statement->execute($params);
 												unset($prep_statement);
 												$message["message"] = "OK";
@@ -1388,7 +1404,7 @@ include "root.php";
 											$sql = str_replace(", WHERE", " WHERE", $sql);
 											$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 											try {
-												$prep_statement = $this->db->prepare($sql);
+												$prep_statement = $this->cache_prepare($sql);
 												$prep_statement->execute($params);
 												//$this->db->query(check_sql($sql));
 												$message["message"] = "OK";
@@ -1490,7 +1506,7 @@ include "root.php";
 														if ($uuid_exists) {
 															$sql = "SELECT ". implode(", ", $child_field_names)." FROM ".$table_name." ";
 															$sql .= "WHERE ".$child_key_name." = '".$child_key_value."' ";
-															$prep_statement = $this->db->prepare($sql);
+															$prep_statement = $this->cache_prepare($sql);
 															if ($prep_statement) {
 																//get the data
 																	$prep_statement->execute();
@@ -1543,7 +1559,7 @@ include "root.php";
 
 																try {
 																	//$this->db->query(check_sql($sql));
-																	$prep_statement = $this->db->prepare($sql);
+																	$prep_statement = $this->cache_prepare($sql);
 																	$prep_statement->execute($params);
 																	unset($prep_statement);
 																	$message["details"][$m]["name"] = $key;
@@ -1659,7 +1675,7 @@ include "root.php";
 															$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 															try {
 																//$this->db->query(check_sql($sql));
-																$prep_statement = $this->db->prepare($sql);
+																$prep_statement = $this->cache_prepare($sql);
 																$prep_statement->execute($params);
 																unset($prep_statement);
 																$message["details"][$m]["name"] = $key;
@@ -1811,7 +1827,7 @@ include "root.php";
 							}
 							$sql .= ":transaction_result ";
 							$sql .= ")";
-							$statement = $this->db->prepare($sql);
+							$statement = $this->cache_prepare($sql);
 							if (isset($user_uuid) && is_uuid($user_uuid)) {
 								$statement->bindParam(':user_uuid', $user_uuid);
 							}
