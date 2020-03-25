@@ -2,6 +2,7 @@
 
 	$y=0;
 	$apps[$x]['menu'][$y]['title']['en-us'] = 'Conference Profiles';
+	$apps[$x]['menu'][$y]['title']['en-gb'] = 'Conference Profiles';
 	$apps[$x]['menu'][$y]['title']['ar-eg'] = "";
 	$apps[$x]['menu'][$y]['title']['de-at'] = 'Konferenzprofile';
 	$apps[$x]['menu'][$y]['title']['de-ch'] = "";
@@ -12,7 +13,7 @@
 	$apps[$x]['menu'][$y]['title']['fr-fr'] = "";
 	$apps[$x]['menu'][$y]['title']['he-il'] = "";
 	$apps[$x]['menu'][$y]['title']['it-it'] = "Profili Conferenza";
-	$apps[$x]['menu'][$y]['title']['nl-nl'] = "";
+	$apps[$x]['menu'][$y]['title']['nl-nl'] = "Conferentie profielen";
 	$apps[$x]['menu'][$y]['title']['pl-pl'] = "";
 	$apps[$x]['menu'][$y]['title']['pt-br'] = "";
 	$apps[$x]['menu'][$y]['title']['pt-pt'] = "";

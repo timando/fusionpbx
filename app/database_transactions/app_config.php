@@ -9,6 +9,7 @@
 		$apps[$x]['license'] = "Mozilla Public License 1.1";
 		$apps[$x]['url'] = "http://www.fusionpbx.com";
 		$apps[$x]['description']['en-us'] = "Track database transactions";
+		$apps[$x]['description']['en-gb'] = "Track database transactions";
 		$apps[$x]['description']['ar-eg'] = "";
 		$apps[$x]['description']['de-at'] = "Datenbanktransaktionen verfolgen";
 		$apps[$x]['description']['de-ch'] = "";
@@ -19,7 +20,7 @@
 		$apps[$x]['description']['fr-fr'] = "";
 		$apps[$x]['description']['he-il'] = "";
 		$apps[$x]['description']['it-it'] = "";
-		$apps[$x]['description']['nl-nl'] = "";
+		$apps[$x]['description']['nl-nl'] = "Database transacties volgen";
 		$apps[$x]['description']['pl-pl'] = "";
 		$apps[$x]['description']['pt-br'] = "";
 		$apps[$x]['description']['pt-pt'] = "";
@@ -76,6 +77,7 @@
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "app_name";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['search'] = 'true';
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Application name.";
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "app_uuid";
@@ -86,18 +88,22 @@
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "transaction_code";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['search'] = 'true';
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Transaction code.";
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "transaction_address";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['search'] = 'true';
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "IP address of the user.";
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "transaction_type";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['search'] = 'true';
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Type: add, update, delete, select";
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "transaction_date";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "timestamp";
+		$apps[$x]['db'][$y]['fields'][$z]['search'] = 'true';
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Transaction date.";
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "transaction_old";

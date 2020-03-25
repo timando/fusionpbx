@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Code is
 	Mark J Crane <markjcrane@fusionpbx.com>
-	Portions created by the Initial Developer are Copyright (C) 2008-2018
+	Portions created by the Initial Developer are Copyright (C) 2008-2020
 	the Initial Developer. All Rights Reserved.
 
 	Contributor(s):
@@ -44,9 +44,9 @@
 	$text = $language->get();
 
 //set the action as an add or an update
-	if (isset($_REQUEST["id"])) {
+	if (is_uuid($_REQUEST["id"])) {
 		$action = "update";
-		$phrase_uuid = check_str($_REQUEST["id"]);
+		$phrase_uuid = $_REQUEST["id"];
 	}
 	else {
 		$action = "add";
@@ -54,13 +54,33 @@
 
 //get the form value and set to php variables
 	if (count($_POST) > 0) {
+
+		//process the http post data by submitted action
+			if ($_POST['action'] != '' && is_uuid($_POST['phrase_uuid'])) {
+				$array[0]['checked'] = 'true';
+				$array[0]['uuid'] = $_POST['phrase_uuid'];
+
+				switch ($_POST['action']) {
+					case 'delete':
+						if (permission_exists('phrase_delete')) {
+							$obj = new phrases;
+							$obj->delete($array);
+						}
+						break;
+				}
+
+				header('Location: phrases.php');
+				exit;
+			}
+
 		if (permission_exists('phrase_domain')) {
-			$domain_uuid = check_str($_POST["domain_uuid"]);
+			$domain_uuid = $_POST["domain_uuid"];
 		}
-		$phrase_name = check_str($_POST["phrase_name"]);
-		$phrase_language = check_str($_POST["phrase_language"]);
-		$phrase_enabled = check_str($_POST["phrase_enabled"]);
-		$phrase_description = check_str($_POST["phrase_description"]);
+		$phrase_name = $_POST["phrase_name"];
+		$phrase_language = $_POST["phrase_language"];
+		$phrase_enabled = $_POST["phrase_enabled"];
+		$phrase_description = $_POST["phrase_description"];
+		$phrase_details_delete = $_POST["phrase_details_delete"];
 
 		//clean the name
 		$phrase_name = str_replace(" ", "_", $phrase_name);
@@ -72,7 +92,15 @@
 	
 		//get the uuid
 			if ($action == "update") {
-				$phrase_uuid = check_str($_POST["phrase_uuid"]);
+				$phrase_uuid = $_POST["phrase_uuid"];
+			}
+
+		//validate the token
+			$token = new token;
+			if (!$token->validate($_SERVER['PHP_SELF'])) {
+				message::add($text['message-invalid_token'],'negative');
+				header('Location: phrases.php');
+				exit;
 			}
 
 		//check for all required data
@@ -95,29 +123,14 @@
 		//add the phrase
 			if ($_POST["persistformvar"] != "true") {
 				if ($action == "add" && permission_exists('phrase_add')) {
-					//add the phrase to the database
+					//build data array
 						$phrase_uuid = uuid();
-						$sql = "insert into v_phrases ";
-						$sql .= "( ";
-						$sql .= "domain_uuid, ";
-						$sql .= "phrase_uuid, ";
-						$sql .= "phrase_name, ";
-						$sql .= "phrase_language, ";
-						$sql .= "phrase_enabled, ";
-						$sql .= "phrase_description ";
-						$sql .= ") ";
-						$sql .= "values ";
-						$sql .= "( ";
-						$sql .= "'".$domain_uuid."', ";
-						$sql .= "'".$phrase_uuid."', ";
-						$sql .= "'".$phrase_name."', ";
-						$sql .= "'".$phrase_language."', ";
-						$sql .= "'".$phrase_enabled."', ";
-						$sql .= "'".$phrase_description."' ";
-						$sql .= ") ";
-						//echo $sql."<br><br>";
-						$db->exec(check_sql($sql));
-						unset($sql);
+						$array['phrases'][0]['domain_uuid'] = $domain_uuid;
+						$array['phrases'][0]['phrase_uuid'] = $phrase_uuid;
+						$array['phrases'][0]['phrase_name'] = $phrase_name;
+						$array['phrases'][0]['phrase_language'] = $phrase_language;
+						$array['phrases'][0]['phrase_enabled'] = $phrase_enabled;
+						$array['phrases'][0]['phrase_description'] = $phrase_description;
 
 						if ($_POST['phrase_detail_function'] != '') {
 							$_POST['phrase_detail_tag'] = 'action'; // default, for now
@@ -125,68 +138,54 @@
 
 							if ($_POST['phrase_detail_data'] != '') {
 								$phrase_detail_uuid = uuid();
-								$sql = "insert into v_phrase_details ";
-								$sql .= "( ";
-								$sql .= "phrase_detail_uuid, ";
-								$sql .= "phrase_uuid, ";
-								$sql .= "domain_uuid, ";
-								$sql .= "phrase_detail_order, ";
-								$sql .= "phrase_detail_tag, ";
-								$sql .= "phrase_detail_pattern, ";
-								$sql .= "phrase_detail_function, ";
-								$sql .= "phrase_detail_data, ";
-								$sql .= "phrase_detail_method, ";
-								$sql .= "phrase_detail_type, ";
-								$sql .= "phrase_detail_group ";
-								$sql .= " ) ";
-								$sql .= "values ";
-								$sql .= "( ";
-								$sql .= "'".$phrase_detail_uuid."', ";
-								$sql .= "'".$phrase_uuid."', ";
-								$sql .= "'".$domain_uuid."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_order'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_tag'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_pattern'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_function'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_data'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_method'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_type'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_group'])."' ";
-								$sql .= ") ";
-								//echo $sql."<br><br>";
-								$db->exec(check_sql($sql));
-								unset($sql);
+								$array['phrase_details'][0]['phrase_detail_uuid'] = $phrase_detail_uuid;
+								$array['phrase_details'][0]['phrase_uuid'] = $phrase_uuid;
+								$array['phrase_details'][0]['domain_uuid'] = $domain_uuid;
+								$array['phrase_details'][0]['phrase_detail_order'] = $_POST['phrase_detail_order'];
+								$array['phrase_details'][0]['phrase_detail_tag'] = $_POST['phrase_detail_tag'];
+								$array['phrase_details'][0]['phrase_detail_pattern'] = $_POST['phrase_detail_pattern'];
+								$array['phrase_details'][0]['phrase_detail_function'] = $_POST['phrase_detail_function'];
+								$array['phrase_details'][0]['phrase_detail_data'] = $_POST['phrase_detail_data'];
+								$array['phrase_details'][0]['phrase_detail_method'] = $_POST['phrase_detail_method'];
+								$array['phrase_details'][0]['phrase_detail_type'] = $_POST['phrase_detail_type'];
+								$array['phrase_details'][0]['phrase_detail_group'] = $_POST['phrase_detail_group'];
 							}
 						}
+
+					//execute insert
+						$p = new permissions;
+						$p->add('phrase_detail_add', 'temp');
+
+						$database = new database;
+						$database->app_name = 'phrases';
+						$database->app_uuid = '5c6f597c-9b78-11e4-89d3-123b93f75cba';
+						$database->save($array);
+						unset($array);
+
+						$p->delete('phrase_detail_add', 'temp');
 
 					//save the xml to the file system if the phrase directory is set
 						//save_phrases_xml();
 
-					//delete the phrase from memcache
-						$fp = event_socket_create($_SESSION['event_socket_ip_address'], $_SESSION['event_socket_port'], $_SESSION['event_socket_password']);
-						if ($fp) {
-							$switch_cmd .= "memcache delete languages:".$phrase_language;
-							$switch_result = event_socket_request($fp, 'api '.$switch_cmd);
-						}
+					//clear the cache
+						$cache = new cache;
+						$cache->delete("languages:".$phrase_language.".".$phrase_uuid);
 
 					//send a redirect
 						message::add($text['message-add']);
 						header("Location: phrase_edit.php?id=".$phrase_uuid);
-						return;
-				} //if ($action == "add")
+						exit;
+				}
 
 			//update the phrase
 				if ($action == "update" && permission_exists('phrase_edit')) {
-					//update the database with the new data
-						$sql = "update v_phrases set ";
-						$sql .= "phrase_name = '".$phrase_name."', ";
-						$sql .= "phrase_language = '".$phrase_language."', ";
-						$sql .= "phrase_enabled = '".$phrase_enabled."', ";
-						$sql .= "phrase_description = '".$phrase_description."' ";
-						$sql .= "where domain_uuid = '".$domain_uuid."' ";
-						$sql .= "and phrase_uuid = '".$phrase_uuid."' ";
-						$db->exec(check_sql($sql));
-						unset($sql);
+					//build data array
+						$array['phrases'][0]['domain_uuid'] = $domain_uuid;
+						$array['phrases'][0]['phrase_uuid'] = $phrase_uuid;
+						$array['phrases'][0]['phrase_name'] = $phrase_name;
+						$array['phrases'][0]['phrase_language'] = $phrase_language;
+						$array['phrases'][0]['phrase_enabled'] = $phrase_enabled;
+						$array['phrases'][0]['phrase_description'] = $phrase_description;
 
 						if ($_POST['phrase_detail_function'] != '') {
 							$_POST['phrase_detail_tag'] = 'action'; // default, for now
@@ -194,108 +193,112 @@
 
 							if ($_POST['phrase_detail_data'] != '') {
 								$phrase_detail_uuid = uuid();
-								$sql = "insert into v_phrase_details ";
-								$sql .= "( ";
-								$sql .= "phrase_detail_uuid, ";
-								$sql .= "phrase_uuid, ";
-								$sql .= "domain_uuid, ";
-								$sql .= "phrase_detail_order, ";
-								$sql .= "phrase_detail_tag, ";
-								$sql .= "phrase_detail_pattern, ";
-								$sql .= "phrase_detail_function, ";
-								$sql .= "phrase_detail_data, ";
-								$sql .= "phrase_detail_method, ";
-								$sql .= "phrase_detail_type, ";
-								$sql .= "phrase_detail_group ";
-								$sql .= ") ";
-								$sql .= "values ";
-								$sql .= "( ";
-								$sql .= "'".$phrase_detail_uuid."', ";
-								$sql .= "'".$phrase_uuid."', ";
-								$sql .= "'".$domain_uuid."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_order'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_tag'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_pattern'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_function'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_data'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_method'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_type'])."', ";
-								$sql .= "'".check_str($_POST['phrase_detail_group'])."' ";
-								$sql .= ") ";
-								//echo $sql."<br><br>";
-								$db->exec(check_sql($sql));
-								unset($sql);
+								$array['phrase_details'][0]['phrase_detail_uuid'] = $phrase_detail_uuid;
+								$array['phrase_details'][0]['phrase_uuid'] = $phrase_uuid;
+								$array['phrase_details'][0]['domain_uuid'] = $domain_uuid;
+								$array['phrase_details'][0]['phrase_detail_order'] = $_POST['phrase_detail_order'];
+								$array['phrase_details'][0]['phrase_detail_tag'] = $_POST['phrase_detail_tag'];
+								$array['phrase_details'][0]['phrase_detail_pattern'] = $_POST['phrase_detail_pattern'];
+								$array['phrase_details'][0]['phrase_detail_function'] = $_POST['phrase_detail_function'];
+								$array['phrase_details'][0]['phrase_detail_data'] = $_POST['phrase_detail_data'];
+								$array['phrase_details'][0]['phrase_detail_method'] = $_POST['phrase_detail_method'];
+								$array['phrase_details'][0]['phrase_detail_type'] = $_POST['phrase_detail_type'];
+								$array['phrase_details'][0]['phrase_detail_group'] = $_POST['phrase_detail_group'];
 							}
+						}
+
+					//execute update/insert
+						$p = new permissions;
+						$p->add('phrase_detail_add', 'temp');
+
+						$database = new database;
+						$database->app_name = 'phrases';
+						$database->app_uuid = '5c6f597c-9b78-11e4-89d3-123b93f75cba';
+						$database->save($array);
+						unset($array);
+
+						$p->delete('phrase_detail_add', 'temp');
+
+					//remove checked phrase details
+						if (
+							is_array($phrase_details_delete)
+							&& @sizeof($phrase_details_delete) != 0
+							) {
+							$obj = new phrases;
+							$obj->phrase_uuid = $phrase_uuid;
+							$obj->delete_details($phrase_details_delete);
 						}
 
 					//save the xml to the file system if the phrase directory is set
 						save_phrases_xml();
 
-					//delete the phrase from memcache
-						$fp = event_socket_create($_SESSION['event_socket_ip_address'], $_SESSION['event_socket_port'], $_SESSION['event_socket_password']);
-						if ($fp) {
-							$switch_cmd .= "memcache delete languages:".$phrase_language;
-							$switch_result = event_socket_request($fp, 'api '.$switch_cmd);
-						}
+					//clear the cache
+						$cache = new cache;
+						$cache->delete("languages:".$phrase_language.".".$phrase_uuid);
 
 					//send a redirect
 						message::add($text['message-update']);
 						header("Location: phrase_edit.php?id=".$phrase_uuid);
-						return;
+						exit;;
 
-				} //if ($action == "update")
+				}
 
-		} //if ($_POST["persistformvar"] != "true")
+			}
 	
-	} //(count($_POST)>0 && strlen($_POST["persistformvar"]) == 0)
+	}
 
 //pre-populate the form
 	if (count($_GET)>0 && $_POST["persistformvar"] != "true") {
-		$phrase_uuid = check_str($_GET["id"]);
+		$phrase_uuid = $_GET["id"];
 		$sql = "select * from v_phrases ";
 		$sql .= "where ( ";
-		$sql .= " domain_uuid = '".$domain_uuid."' or ";
+		$sql .= " domain_uuid = :domain_uuid or ";
 		$sql .= " domain_uuid is null ";
 		$sql .= ") ";
-		$sql .= "and phrase_uuid = '".$phrase_uuid."' ";
-		$prep_statement = $db->prepare(check_sql($sql));
-		$prep_statement->execute();
-		$result = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-		foreach ($result as &$row) {
+		$sql .= "and phrase_uuid = :phrase_uuid ";
+		$parameters['domain_uuid'] = $domain_uuid;
+		$parameters['phrase_uuid'] = $phrase_uuid;
+		$database = new database;
+		$row = $database->select($sql, $parameters, 'row');
+		if (is_array($row) && @sizeof($row) != 0) {
 			$phrase_name = $row["phrase_name"];
 			$phrase_language = $row["phrase_language"];
 			$phrase_enabled = $row["phrase_enabled"];
 			$phrase_description = $row["phrase_description"];
-			break; //limit to 1 row
 		}
-		unset ($prep_statement);
+		unset($sql, $parameters, $row);
 	}
 
 //get the phrase details
-	if (strlen($phrase_uuid) > 0) {
+	if (is_uuid($phrase_uuid)) {
 		$sql = "select * from v_phrase_details ";
-		$sql .= "where domain_uuid = '".$_SESSION['domain_uuid']."' ";
-		$sql .= "and phrase_uuid = '".$phrase_uuid."' ";
+		$sql .= "where domain_uuid = :domain_uuid ";
+		$sql .= "and phrase_uuid = :phrase_uuid ";
 		$sql .= "order by phrase_detail_order asc ";
-		$prep_statement = $db->prepare(check_sql($sql));
-		$prep_statement->execute();
-		$phrase_details = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-		unset($sql, $prep_statement);
+		$parameters['domain_uuid'] = $_SESSION['domain_uuid'];
+		$parameters['phrase_uuid'] = $phrase_uuid;
+		$database = new database;
+		$phrase_details = $database->select($sql, $parameters, 'all');
+		unset($sql, $parameters);
 	}
 
 //get the recordings
 	$sql = "select * from v_recordings ";
-	$sql .= "where domain_uuid = '".$_SESSION["domain_uuid"]."' ";
+	$sql .= "where domain_uuid = :domain_uuid ";
 	$sql .= "order by recording_name asc ";
-	$prep_statement = $db->prepare(check_sql($sql));
-	$prep_statement->execute();
-	$recordings = $prep_statement->fetchAll(PDO::FETCH_ASSOC);
-	unset($sql, $prep_statement);
+	$parameters['domain_uuid'] = $_SESSION['domain_uuid'];
+	$database = new database;
+	$recordings = $database->select($sql, $parameters, 'all');
+	unset($sql, $parameters);
 
-//show the header
-	require_once "resources/header.php";
+//create token
+	$object = new token;
+	$token = $object->create($_SERVER['PHP_SELF']);
+
+//include the header
 	if ($action == 'add') { $document['title'] = $text['title-add_phrase']; }
 	if ($action == 'update') { $document['title'] = $text['title-edit_phrase']; }
+	require_once "resources/header.php";
 
 //js to control action form input
 	echo "<script type='text/javascript'>\n";
@@ -322,38 +325,39 @@
 	echo "		obj_action.options[obj_action.options.length] = new Option('', '');\n"; //blank option
 	//recordings
 		$tmp_selected = false;
-		if (count($recordings) > 0) {
+		if (is_array($recordings) && @sizeof($recordings) != 0) {
 			echo "var opt_group = document.createElement('optgroup');\n";
 			echo "opt_group.label = \"".$text['label-recordings']."\";\n";
 			foreach ($recordings as &$row) {
 				if ($_SESSION['recordings']['storage_type']['text'] == 'base64') {
-					echo "opt_group.appendChild(new Option(\"".escape($row["recording_name"])."\", \"lua(streamfile.lua ".escape($row["recording_filename"]).")\"));\n";
+					echo "opt_group.appendChild(new Option(\"".$row["recording_name"]."\", \"\${lua streamfile.lua ".$row["recording_filename"]."}\"));\n";
 				}
 				else {
-					echo "opt_group.appendChild(new Option(\"".escape($row["recording_name"])."\", \"".$_SESSION['switch']['recordings']['dir'].'/'.$_SESSION['domain_name'].'/'.escape($row["recording_filename"])."\"));\n";
+					echo "opt_group.appendChild(new Option(\"".$row["recording_name"]."\", \"".$_SESSION['switch']['recordings']['dir'].'/'.$_SESSION['domain_name'].'/'.$row["recording_filename"]."\"));\n";
 				}
 			}
 			echo "obj_action.appendChild(opt_group);\n";
 		}
-		unset($sql, $prep_statement, $recordings);
+		unset($recordings, $row);
 	//sounds
 		$file = new file;
 		$sound_files = $file->sounds();
-		if (is_array($sound_files)) {
+		if (is_array($sound_files) && @sizeof($sound_files) != 0) {
 			echo "var opt_group = document.createElement('optgroup');\n";
 			echo "opt_group.label = \"".$text['label-sounds']."\";\n";
 			foreach ($sound_files as $value) {
 				if (strlen($value) > 0) {
-					echo "opt_group.appendChild(new Option(\"".escape($value)."\", \"".escape($value)."\"));\n";
+					echo "opt_group.appendChild(new Option(\"".$value."\", \"".$value."\"));\n";
 				}
 			}
 			echo "obj_action.appendChild(opt_group);\n";
 		}
+		unset($sound_files, $row);
 	echo "	}\n";
 	echo "	else if (selected_index == 1) {\n"; //pause
 	echo "		obj_action.options[obj_action.options.length] = new Option('', '');\n"; //blank option
 	for ($s = 0.1; $s <= 5; $s = $s + 0.1) {
-		echo "	obj_action.options[obj_action.options.length] = new Option('".$s."s', 'sleep(".($s * 1000).")');\n";
+		echo "	obj_action.options[obj_action.options.length] = new Option('".number_format($s, 1)."s', 'sleep(".($s * 1000).")');\n";
 	}
 	echo "	}\n";
 	if (if_group("superadmin")) {
@@ -417,26 +421,34 @@
 	echo "</script>\n";
 
 //show the content
-	echo "<form method='post' name='frm' action=''>\n";
+	echo "<form method='post' name='frm' id='frm'>\n";
+
+	echo "<div class='action_bar' id='action_bar'>\n";
+	echo "	<div class='heading'>";
+	if ($action == "add") {
+		echo "<b>".$text['title-add_phrase']."</b>";
+	}
+	if ($action == "update") {
+		echo "<b>".$text['title-edit_phrase']."</b>";
+	}
+	echo "	</div>\n";
+	echo "	<div class='actions'>\n";
+	echo button::create(['type'=>'button','label'=>$text['button-back'],'icon'=>$_SESSION['theme']['button_icon_back'],'id'=>'btn_back','link'=>'phrases.php']);
+	if ($action == "update") {
+		echo button::create(['type'=>'submit','label'=>$text['button-delete'],'icon'=>$_SESSION['theme']['button_icon_delete'],'id'=>'btn_delete','name'=>'action','value'=>'delete','style'=>'margin-left: 15px;','onclick'=>"if (!confirm('".$text['confirm-delete']."')) { this.blur(); return false; }"]);
+	}
+	echo button::create(['type'=>'submit','label'=>$text['button-save'],'icon'=>$_SESSION['theme']['button_icon_save'],'id'=>'btn_save','style'=>'margin-left: 15px;']);
+	echo "	</div>\n";
+	echo "	<div style='clear: both;'></div>\n";
+	echo "</div>\n";
+
 	echo "<table width='100%'  border='0' cellpadding='0' cellspacing='0'>\n";
 
 	echo "<tr>\n";
-	echo "	<td align='left' width='30%' nowrap valign='top'>";
-	if ($action == "add") { echo "<b>".$text['title-add_phrase']."</b>"; }
-	if ($action == "update") { echo "<b>".$text['title-edit_phrase']."</b>"; }
-	echo "	<br /><br />";
-	echo "	</td>\n";
-	echo "<td width='70%' align='right' valign='top'>";
-	echo "	<input type='button' class='btn' alt='".$text['button-back']."' onclick=\"window.location='phrases.php'\" value='".$text['button-back']."'>";
-	echo "	<input type='submit' name='submit' class='btn' value='".$text['button-save']."'>\n";
-	echo "</td>\n";
-	echo "</tr>\n";
-
-	echo "<tr>\n";
-	echo "<td class='vncellreq' valign='top' align='left' nowrap>\n";
+	echo "<td width='30%' class='vncellreq' valign='top' align='left' nowrap>\n";
 	echo "	".$text['label-name']."\n";
 	echo "</td>\n";
-	echo "<td class='vtable' align='left'>\n";
+	echo "<td width='70%' class='vtable' align='left'>\n";
 	echo "	<input class='formfld' type='text' name='phrase_name' maxlength='255' value=\"".escape($phrase_name)."\">\n";
 	echo "	<br />\n";
 	echo "	".$text['description-name']."\n";
@@ -457,28 +469,33 @@
 	echo "<tr>";
 	echo "<td class='vncell' valign='top'>".$text['label-structure']."</td>";
 	echo "<td class='vtable' align='left'>";
-	echo "	<table width='59%' border='0' cellpadding='0' cellspacing='0'>\n";
+	echo "	<table border='0' cellpadding='0' cellspacing='0'>\n";
 	echo "		<tr>\n";
-	echo "			<td class='vtable'>".$text['label-function']."</td>\n";
-	echo "			<td class='vtable'>".$text['label-action']."</td>\n";
-	echo "			<td class='vtable' style='text-align: center;'>".$text['label-order']."</td>\n";
-	echo "			<td></td>\n";
+	echo "			<td class='vtable'><strong>".$text['label-function']."</strong></td>\n";
+	echo "			<td class='vtable'><strong>".$text['label-action']."</strong></td>\n";
+	echo "			<td class='vtable' style='text-align: center;'><strong>".$text['label-order']."</strong></td>\n";
+	if ($phrase_details) {
+		echo "			<td class='vtable edit_delete_checkbox_all' onmouseover=\"swap_display('delete_label_details', 'delete_toggle_details');\" onmouseout=\"swap_display('delete_label_details', 'delete_toggle_details');\">\n";
+		echo "				<span id='delete_label_details'>".$text['label-delete']."</span>\n";
+		echo "				<span id='delete_toggle_details'><input type='checkbox' id='checkbox_all_details' name='checkbox_all' onclick=\"edit_all_toggle('details');\"></span>\n";
+		echo "			</td>\n";
+	}
 	echo "		</tr>\n";
-	if (is_array($phrase_details)) {
-		foreach($phrase_details as $field) {
+	if (is_array($phrase_details) && @sizeof($phrase_details) != 0) {
+		foreach($phrase_details as $x => $field) {
 			//clean up output for display
-			if ($field['phrase_detail_function'] == 'execute' && substr($field['phrase_detail_data'], 0, 19) == 'lua(streamfile.lua ') {
+			if ($field['phrase_detail_function'] == 'play-file' && substr($field['phrase_detail_data'], 0, 21) == '${lua streamfile.lua ') {
 				$phrase_detail_function = $text['label-play'];
-				$phrase_detail_data = str_replace('lua(streamfile.lua ', '', $field['phrase_detail_data']);
-				$phrase_detail_data = str_replace(')', '', $phrase_detail_data);
+				$phrase_detail_data = str_replace('${lua streamfile.lua ', '', $field['phrase_detail_data']);
+				$phrase_detail_data = str_replace('}', '', $phrase_detail_data);
 			}
-			elseif ($field['phrase_detail_function'] == 'execute' && substr($field['phrase_detail_data'], 0, 6) == 'sleep(') {
+			else if ($field['phrase_detail_function'] == 'execute' && substr($field['phrase_detail_data'], 0, 6) == 'sleep(') {
 				$phrase_detail_function = $text['label-pause'];
 				$phrase_detail_data = str_replace('sleep(', '', $field['phrase_detail_data']);
 				$phrase_detail_data = str_replace(')', '', $phrase_detail_data);
 				$phrase_detail_data = ($phrase_detail_data / 1000).'s'; // seconds
 			}
-			elseif ($field['phrase_detail_function'] == 'play-file') {
+			else if ($field['phrase_detail_function'] == 'play-file') {
 				$phrase_detail_function = $text['label-play'];
 				$phrase_detail_data = str_replace($_SESSION['switch']['recordings']['dir'].'/'.$_SESSION['domain_name'].'/', '', $field['phrase_detail_data']);
 			}
@@ -490,14 +507,18 @@
 			echo "	<td class='vtable'>".escape($phrase_detail_function)."&nbsp;</td>\n";
 			echo "	<td class='vtable'>".escape($phrase_detail_data)."&nbsp;</td>\n";
 			echo "	<td class='vtable' style='text-align: center;'>".$field['phrase_detail_order']."&nbsp;</td>\n";
-			echo "	<td class='list_control_icons' style='text-align: left;'>";
-			echo 		"<a href='phrase_detail_delete.php?pdid=".escape($field['phrase_detail_uuid'])."&pid=".escape($phrase_uuid)."&a=delete&lang=".escape($phrase_language)."' alt='".$text['button-delete']."' onclick=\"return confirm('".$text['confirm-delete']."')\">".$v_link_label_delete."</a>";
+			echo "	<td class='vtable' style='text-align: center; padding-bottom: 3px;'>";
+			if (is_uuid($field['phrase_detail_uuid'])) {
+				echo "		<input type='checkbox' name='phrase_details_delete[".$x."][checked]' value='true' class='chk_delete checkbox_details' onclick=\"edit_delete_action('details');\">\n";
+				echo "		<input type='hidden' name='phrase_details_delete[".$x."][uuid]' value='".escape($field['phrase_detail_uuid'])."' />\n";
+			}
 			echo "	</td>\n";
 			echo "</tr>\n";
 		}
 	}
+	unset($phrase_details, $field);
 	echo "<tr>\n";
-	echo "	<td class='vtable' align='left' nowrap='nowrap'>\n";
+	echo "	<td class='vtable' style='border-bottom: none;' align='left' nowrap='nowrap'>\n";
 	echo "		<select name='phrase_detail_function' id='phrase_detail_function' class='formfld' onchange=\"load_action_options(this.selectedIndex);\">\n";
 	echo "			<option value='play-file'>".$text['label-play']."</option>\n";
 	echo "			<option value='execute'>".$text['label-pause']."</option>\n";
@@ -506,14 +527,14 @@
 	}
 	echo "		</select>\n";
 	echo "	</td>\n";
-	echo "	<td class='vtable' align='left' nowrap='nowrap'>\n";
+	echo "	<td class='vtable' style='border-bottom: none;' align='left' nowrap='nowrap'>\n";
 	echo "		<select name='phrase_detail_data' id='phrase_detail_data' class='formfld' style='width: 300px; min-width: 300px; max-width: 300px;' ".((if_group("superadmin")) ? "onchange='action_to_input();'" : null)."></select>";
 	if (if_group("superadmin")) {
 		echo "	<input id='phrase_detail_data_switch' type='button' class='btn' style='margin-left: 4px; display: none;' value='&#9665;' onclick=\"action_to_select(); load_action_options(document.getElementById('phrase_detail_function').selectedIndex);\">\n";
 	}
 	echo "		<script>load_action_options(0);</script>\n";
 	echo "	</td>\n";
-	echo "	<td class='vtable'>\n";
+	echo "	<td class='vtable' style='border-bottom: none;'>\n";
 	echo "		<select name='phrase_detail_order' class='formfld'>\n";
 	for ($i = 0; $i <= 999; $i++) {
 		$i_padded = str_pad($i, 3, '0', STR_PAD_LEFT);
@@ -522,7 +543,7 @@
 	echo "		</select>\n";
 	echo "	</td>\n";
 	echo "	<td>\n";
-	echo "		<input type='submit' class='btn' alt=\"".$text['button-add']."\" value=\"".$text['button-add']."\">\n";
+	echo button::create(['type'=>'submit','label'=>$text['button-add'],'icon'=>$_SESSION['theme']['button_icon_add']]);
 	echo "	</td>\n";
 
 	echo "	</tr>\n";
@@ -582,18 +603,14 @@
 	echo "</td>\n";
 	echo "</tr>\n";
 
-	echo "<tr>\n";
-	echo "<td colspan='2' align='right'>\n";
+	echo "</table>";
+	echo "<br><br>";
+
 	if ($action == "update") {
 		echo "	<input type='hidden' name='phrase_uuid' value='".escape($phrase_uuid)."'>\n";
 	}
-	echo "		<br />";
-	echo "		<input type='submit' name='submit' class='btn' alt=\"".$text['button-save']."\" value='".$text['button-save']."'>\n";
-	echo "</td>\n";
-	echo "</tr>";
+	echo "<input type='hidden' name='".$token['name']."' value='".$token['hash']."'>\n";
 
-	echo "</table>";
-	echo "<br><br>";
 	echo "</form>";
 
 //include the footer

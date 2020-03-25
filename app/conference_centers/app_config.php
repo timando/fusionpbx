@@ -9,6 +9,7 @@
 		$apps[$x]['license'] = "Mozilla Public License 1.1";
 		$apps[$x]['url'] = "http://www.fusionpbx.com";
 		$apps[$x]['description']['en-us'] = "Conferences Centers allows one or more audio and video conference rooms.";
+		$apps[$x]['description']['en-gb'] = "Conferences Centers allows one or more audio and video conference rooms.";
 		$apps[$x]['description']['ar-eg'] = "";
 		$apps[$x]['description']['de-at'] = "Konferenzzentralen stellen ein oder mehrere Audio- und Videokonferenzräume bereit.";
 		$apps[$x]['description']['de-ch'] = "";
@@ -19,7 +20,7 @@
 		$apps[$x]['description']['fr-fr'] = "Centre de Conférences permet une ou plus conferences audio ou vidéo.";
 		$apps[$x]['description']['he-il'] = "";
 		$apps[$x]['description']['it-it'] = "";
-		$apps[$x]['description']['nl-nl'] = "";
+		$apps[$x]['description']['nl-nl'] = "Conferentie centra maakt instellen van een of meer audio en video conferenties mogelijk.";
 		$apps[$x]['description']['pl-pl'] = "";
 		$apps[$x]['description']['pt-br'] = "O centro de conferências permite gerir uma ou mais salas de conferência de audio e vídeo.";
 		$apps[$x]['description']['pt-pt'] = "O centro de conferências permite gerir uma ou mais salas de conferência, audio e vídeo.";
@@ -111,8 +112,6 @@
 		$y++;
 		$apps[$x]['permissions'][$y]['name'] = "conference_room_max_members";
 		$apps[$x]['permissions'][$y]['groups'][] = "superadmin";
-		$apps[$x]['permissions'][$y]['groups'][] = "admin";
-		$apps[$x]['permissions'][$y]['groups'][] = "user";
 		$y++;
 		$apps[$x]['permissions'][$y]['name'] = "conference_room_wait_mod";
 		$apps[$x]['permissions'][$y]['groups'][] = "superadmin";
@@ -172,6 +171,13 @@
 		$apps[$x]['permissions'][$y]['name'] = "conference_session_detail_delete";
 		$apps[$x]['permissions'][$y]['groups'][] = "superadmin";
 		$apps[$x]['permissions'][$y]['groups'][] = "admin";
+		$y++;
+		$apps[$x]['permissions'][$y]['name'] = "conference_center_destinations";
+		$apps[$x]['permissions'][$y]['groups'][] = "superadmin";
+		$apps[$x]['permissions'][$y]['groups'][] = "admin";
+
+	//cache details
+		$apps[$x]['cache']['key'] = "dialplan.\${domain_name}";
 
 	//schema details
 		$y=0;
@@ -203,10 +209,12 @@
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "conference_center_name";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['search'] = 'true';
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Enter the conference center name.";
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "conference_center_extension";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['search'] = 'true';
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Enter the conference center extension number.";
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "conference_center_pin_length";
@@ -215,10 +223,12 @@
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "conference_center_greeting";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['search'] = 'true';
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Enter the conference greeting.";
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "conference_center_description";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['search'] = 'true';
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Enter the center description.";
 		$z++;
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "conference_center_enabled";

@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Code is
 	Mark J Crane <markjcrane@fusionpbx.com>
-	Portions created by the Initial Developer are Copyright (C) 2008-2018
+	Portions created by the Initial Developer are Copyright (C) 2008-2019
 	the Initial Developer. All Rights Reserved.
 
 	Contributor(s):
@@ -26,7 +26,7 @@
 */
 
 //includes
-	include "root.php";
+	require_once "root.php";
 	require_once "resources/require.php";
 	require_once "resources/check_auth.php";
 
@@ -43,11 +43,6 @@
 	$language = new text;
 	$text = $language->get();
 
-//define variables
-	$c = 0;
-	$row_style["0"] = "row_style0";
-	$row_style["1"] = "row_style1";
-
 //set a default line number value (off)
 	if (!isset($_POST['line_number']) || $_POST['line_number'] == '') { $_POST['line_number'] = 0; }
 
@@ -56,7 +51,7 @@
 
 //set a default file size
 	if (!isset($_POST['size']) || strlen($_POST['size']) == 0) { $_POST['size'] = "32"; }
-	
+
 //set a default filter
 	if (!isset($_POST['filter'])) { $_POST['filter'] = ""; }	
 
@@ -78,30 +73,30 @@
 	}
 
 //include the header
+	$document['title'] = $text['title-log_viewer'];
 	require_once "resources/header.php";
 
 //show the content
+	echo "<div class='action_bar' id='action_bar'>\n";
+	echo "	<div class='heading'><b>".$text['title-log_viewer']."</b></div>\n";
+	echo "	<div class='actions'>\n";
+	echo 		"<form name='frm' id='frm' class='inline' method='post'>\n";
+	echo 		$text['label-filter']." <input type='text' name='filter' class='formfld' style='width: 150px; text-align: center; margin-right: 20px;' value=\"".escape($_POST['filter'])."\" onclick='this.select();'>";
+	echo 		"<label style='margin-right: 20px; margin-top: 4px;'><input type='checkbox' name='line_number' id='line_number' value='1' ".($_POST['line_number'] == 1 ? 'checked' : null)."> ".$text['label-line_number']."</label>";
+	echo 		"<label style='margin-right: 20px; margin-top: 4px;'><input type='checkbox' name='sort' id='sort' value='desc' ".($_POST['sort'] == 'desc' ? 'checked' : null)."> ".$text['label-sort']."</label>";
+	echo 		$text['label-display']." <input type='text' class='formfld' style='width: 50px; text-align: center;' name='size' value=\"".escape($_POST['size'])."\" onclick='this.select();'> ".$text['label-size'];
+	echo button::create(['type'=>'submit','label'=>$text['button-update'],'icon'=>$_SESSION['theme']['button_icon_save'],'style'=>'margin-left: 15px;','name'=>'submit']);
+	if (permission_exists('log_download')) {
+		echo button::create(['type'=>'button','label'=>$text['button-download'],'icon'=>$_SESSION['theme']['button_icon_download'],'style'=>'margin-left: 15px;','link'=>'log_viewer.php?a=download&t=logs']);
+	}
+	echo 		"</form>\n";
+	echo "	</div>\n";
+	echo "	<div style='clear: both;'></div>\n";
+	echo "</div>\n";
+
 	echo "<table width='100%' cellpadding='0' cellspacing='0' border='0'>\n";
 	echo "	<tr>\n";
-	echo "		<td align='left' valign='top' width='100%' style='padding-right: 15px;' nowrap>\n";
-	echo "			<b>".$text['label-log_viewer']."</b><br />\n";
-	echo "		</td>\n";
-	echo "		<td align='right' valign='middle' nowrap>\n";
-	echo "			<form action='log_viewer.php' method='POST'>\n";
-	echo "			".$text['label-filter']." <input type='text' name='filter' class='formfld' style='width: 150px; text-align: center; margin-right: 20px;' value=\"".escape($_POST['filter'])."\" onclick='this.select();'>";
-	echo "			<label style='margin-right: 20px; margin-top: 4px;'><input type='checkbox' name='line_number' id='line_number' value='1' ".(($_POST['line_number'] == 1) ? 'checked' : null)."> ".$text['label-line_number']."</label>";
-	echo "			<label style='margin-right: 20px; margin-top: 4px;'><input type='checkbox' name='sort' id='sort' value='desc' ".(($_POST['sort'] == 'desc') ? 'checked' : null)."> ".$text['label-sort']."</label>";
-	echo "			Display <input type='text' class='formfld' style='width: 50px; text-align: center;' name='size' value=\"".escape($_POST['size'])."\" onclick='this.select();'> ".$text['label-size']."";
-	echo "			<input type='submit' class='btn' style='margin-left: 20px;' name='submit' value=\"".$text['button-reload']."\">";
-	if (permission_exists('log_download')) {
-		echo "		<input type='button' class='btn' value='".$text['button-download']."' onclick=\"document.location.href='log_viewer.php?a=download&t=logs';\" />\n";
-	}
-	echo "			</form>\n";
-	echo "		</td>\n";
-	echo "	</tr>\n";
-	echo "	<tr><td colspan='2'>&nbsp;</td></tr>";
-	echo "	<tr>\n";
-	echo "		<td colspan='2' style='background-color: #1c1c1c; padding: 8px; text-align: left;'>";
+	echo "		<td style='background-color: #1c1c1c; padding: 8px; text-align: left;'>";
 
 	if (permission_exists('log_view')) {
 
@@ -148,6 +143,11 @@
 		$array_filter[5]['color'] = 'gold';
 		$array_filter[5]['type'] = 'bold';
 		$array_filter[5]['font'] = 'monospace';
+		
+		$array_filter[6]['pattern'] = '[CRIT]';
+		$array_filter[6]['color'] = 'red';
+		$array_filter[6]['type'] = 'bold';
+		$array_filter[6]['font'] = 'monospace';
 
 		$file_size = filesize($log_file);
 
@@ -158,44 +158,39 @@
 		}
 		*/
 
-		echo "		<table cellpadding='0' cellspacing='0' border='0' width='100%'>";
-		echo "			<tr>";
+		echo "<div style='padding-bottom: 10px; text-align: right; color: #fff; margin-bottom: 15px; border-bottom: 1px solid #fff;'>";
 		$user_file_size = '32768';
 		if (isset($_POST['submit'])) {
-			if (!is_numeric($_POST['size'])){
+			if (!is_numeric($_POST['size'])) {
 				//should generate log warning here...
-				$user_file_size=1024 * 32;
+				$user_file_size = 1024 * 32;
 			}
 			else {
 				$user_file_size = $_POST['size'] * 1024;
 			}
-			if (strlen($_REQUEST['filter']) > 0){
-				$uuid_filter = $_REQUEST['filter'];
-				echo "		<td style='text-align: left; color: #FFFFFF;'>".$text['description-filter']." ".escape($uuid_filter)."</td>";
+			if (strlen($_REQUEST['filter']) > 0) {
+				$filter = $_REQUEST['filter'];
 			}
 		}
-
 		//echo "Log File Size: " . $file_size . " bytes. <br />";
-		echo "				<td style='text-align: right;color: #FFFFFF;'>".$text['label-displaying']." ".number_format($user_file_size,0,'.',',')." of ".number_format($file_size,0,'.',',')." ".$text['label-bytes'].". </td>";
-		echo "			</tr>";
-		echo "		</table>";
-		echo "		<hr size='1' style='color: #fff;'>";
+		echo "	".$text['label-displaying']." ".number_format($user_file_size,0,'.',',')." of ".number_format($file_size,0,'.',',')." ".$text['label-bytes'].".";
+		echo "</div>";
 
 		$file = fopen($log_file, "r") or exit($text['error-open_file']);
 
 		//set pointer in file
 		if ($user_file_size >= '0') {
-			if ($user_file_size == '0'){
+			if ($user_file_size == '0') {
 				$user_file_size = $default_file_size;
 			}
-			if ( $file_size >= $user_file_size ){
+			if ($file_size >= $user_file_size) {
 				//set an offset on fopen
 				$byte_count=$file_size-$user_file_size;
 				fseek($file, $byte_count);
 				//echo "opening at " . $byte_count . " bytes<br>";
 			}
 			else {
-				if ( $file_size >= $default_file_size ){
+				if ($file_size >= $default_file_size) {
 					//set an offset on fopen
 					$byte_count=$file_size-$default_file_size;
 					fseek($file, $byte_count);
@@ -210,7 +205,7 @@
 			}
 		}
 		else {
-			if ( $file_size >= $default_file_size ){
+			if ( $file_size >= $default_file_size ) {
 				//set an offset on fopen
 				$byte_count = $file_size - $default_file_size;
 				fseek($file, $byte_count);
@@ -227,13 +222,13 @@
 		//start processing
 		$byte_count = 0;
 		while(!feof($file)) {
-			$log_line = fgets($file);
+			$log_line = escape(fgets($file));
 			$byte_count++;
 			$noprint = false;
 
 			$skip_line = false;
-			if (!empty($uuid_filter) ) {
-				$uuid_match = strpos($log_line, $uuid_filter);
+			if (!empty($filter) ) {
+				$uuid_match = strpos($log_line, $filter);
 				if ($uuid_match === false) {
 					$skip_line = true;
 				}
@@ -244,13 +239,13 @@
 
 			if ($skip_line === false) {
 				foreach ($array_filter as $v1) {
-					$pos = strpos($log_line, $v1['pattern']);
+					$pos = strpos($log_line, escape($v1['pattern']));
 					//echo "</br> POS is: '$pos'</br>";
-					if ($pos !== false){
+					if ($pos !== false) {
 						//color adjustments on words in log line
-						for ($i=2; $i<=$MAXEL; $i++){
-							if (isset ($v1["pattern".$i])) {
-								$log_line = str_replace($v1["pattern".$i], "<span style='color: ".$v1["color".$i].";'>".$v1["pattern".$i]."</span>", $log_line);
+						for ($i=2; $i<=$MAXEL; $i++) {
+							if (isset($v1["pattern".$i])) {
+								$log_line = str_replace(escape($v1["pattern".$i]), "<span style='color: ".$v1["color".$i].";'>".$v1["pattern".$i]."</span>", $log_line);
 							}
 						}
 						$array_output[] = "<span style='color: ".$v1['color']."; font-family: ".$v1['font'].";'>".$log_line."</span><br>";
@@ -258,8 +253,8 @@
 					}
 				}
 
-				if ($noprint !== true){
-					$array_output[] = "<span style='color: ".$default_color."; font-family: ".$default_font.";'>".escape($log_line)."</span><br>";
+				if ($noprint !== true) {
+					$array_output[] = "<span style='color: ".$default_color."; font-family: ".$default_font.";'>".$log_line."</span><br>";
 				}
 			}
 		}

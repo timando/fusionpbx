@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Code is
 	Mark J Crane <markjcrane@fusionpbx.com>
-	Portions created by the Initial Developer are Copyright (C) 2018
+	Portions created by the Initial Developer are Copyright (C) 2018-2020
 	the Initial Developer. All Rights Reserved.
 
 	Contributor(s):
@@ -27,9 +27,9 @@
 //includes
 	require_once "root.php";
 	require_once "resources/require.php";
+	require_once "resources/check_auth.php";
 
 //check permissions
-	require_once "resources/check_auth.php";
 	if (permission_exists('message_add') || permission_exists('message_edit')) {
 		//access granted
 	}
@@ -43,10 +43,9 @@
 	$text = $language->get();
 
 //action add or update
-	if (isset($_REQUEST["id"])) {
+	if (is_uuid($_REQUEST["id"])) {
 		$action = "update";
-		$message_uuid = check_str($_REQUEST["id"]);
-		$id = check_str($_REQUEST["id"]);
+		$message_uuid = $_REQUEST["id"];
 	}
 	else {
 		$action = "add";
@@ -54,18 +53,18 @@
 
 //get http post variables and set them to php variables
 	if (is_array($_POST)) {
-		$message_uuid = check_str($_POST["message_uuid"]);
-		//$user_uuid = check_str($_POST["user_uuid"]);
-		$message_type = check_str($_POST["message_type"]);
-		$message_direction = check_str($_POST["message_direction"]);
-		$message_date = check_str($_POST["message_date"]);
-		$message_from = check_str($_POST["message_from"]);
-		$message_to = check_str($_POST["message_to"]);
-		$message_text = check_str($_POST["message_text"]);
-		$message_media_type = check_str($_POST["message_media_type"]);
-		$message_media_url = check_str($_POST["message_media_url"]);
-		$message_media_content = check_str($_POST["message_media_content"]);
-		$message_json = check_str($_POST["message_json"]);
+		$message_uuid = $_POST["message_uuid"];
+		$user_uuid = $_POST["user_uuid"];
+		$message_type = $_POST["message_type"];
+		$message_direction = $_POST["message_direction"];
+		$message_date = $_POST["message_date"];
+		$message_from = $_POST["message_from"];
+		$message_to = $_POST["message_to"];
+		$message_text = $_POST["message_text"];
+		$message_media_type = $_POST["message_media_type"];
+		$message_media_url = $_POST["message_media_url"];
+		$message_media_content = $_POST["message_media_content"];
+		$message_json = $_POST["message_json"];
 	}
 
 //process the user data and save it to the database
@@ -73,12 +72,37 @@
 
 		//get the uuid from the POST
 			if ($action == "update") {
-				$message_uuid = check_str($_POST["message_uuid"]);
+				$message_uuid = $_POST["message_uuid"];
+			}
+
+		//process the http post data by submitted action
+			if ($_POST['action'] != '' && is_uuid($message_uuid)) {
+				$array[0]['checked'] = 'true';
+				$array[0]['uuid'] = $message_uuid;
+
+				switch ($_POST['action']) {
+					case 'delete':
+						if (permission_exists('message_delete')) {
+							$obj = new messages;
+							$obj->delete($array);
+						}
+						break;
+				}
+
+				header('Location: messages_log.php');
+				exit;
+			}
+
+		//validate the token
+			$token = new token;
+			if (!$token->validate($_SERVER['PHP_SELF'])) {
+				message::add($text['message-invalid_token'],'negative');
+				header('Location: messages_log.php');
+				exit;
 			}
 
 		//check for all required data
 			$msg = '';
-			//if (strlen($user_uuid) == 0) { $msg .= $text['message-required']." ".$text['label-user_uuid']."<br>\n"; }
 			if (strlen($message_type) == 0) { $msg .= $text['message-required']." ".$text['label-message_type']."<br>\n"; }
 			if (strlen($message_direction) == 0) { $msg .= $text['message-required']." ".$text['label-message_direction']."<br>\n"; }
 			if (strlen($message_date) == 0) { $msg .= $text['message-required']." ".$text['label-message_date']."<br>\n"; }
@@ -102,33 +126,28 @@
 				return;
 			}
 
-		//set the domain_uuid
-				$_POST["domain_uuid"] = $_SESSION["domain_uuid"];
-
 		//add the message_uuid
-			if (strlen($_POST["message_uuid"]) == 0) {
+			if (!is_uuid($_POST["message_uuid"])) {
 				$message_uuid = uuid();
-				$_POST["message_uuid"] = $message_uuid;
 			}
 
 		//prepare the array
-			$array['messages'][0] = $_POST;
+			$array['messages'][0]['domain_uuid'] = $_SESSION["domain_uuid"];;
+			$array['messages'][0]['user_uuid'] = $user_uuid;
+			$array['messages'][0]['message_uuid'] = $message_uuid;
+			$array['messages'][0]['message_type'] = $message_type;
+			$array['messages'][0]['message_direction'] = $message_direction;
+			$array['messages'][0]['message_date'] = $message_date;
+			$array['messages'][0]['message_from'] = $message_from;
+			$array['messages'][0]['message_to'] = $message_to;
+			$array['messages'][0]['message_text'] = $message_text;
+			$array['messages'][0]['message_uuid'] = $message_uuid;
 
 		//save to the data
 			$database = new database;
 			$database->app_name = 'messages';
-			$database->app_uuid = null;
-			if (strlen($message_uuid) > 0) {
-				$database->uuid($message_uuid);
-			}
+			$database->app_uuid = '4a20815d-042c-47c8-85df-085333e79b87';
 			$database->save($array);
-			$message = $database->message;
-
-		//debug info
-			//echo "<pre>";
-			//print_r($message);
-			//echo "</pre>";
-			//exit;
 
 		//redirect the user
 			if (isset($action)) {
@@ -139,20 +158,19 @@
 					message::add($text['message-update']);
 				}
 				header('Location: message_edit.php?id='.$message_uuid);
-				return;
+				exit;
 			}
-	} //(is_array($_POST) && strlen($_POST["persistformvar"]) == 0)
+	}
 
 //pre-populate the form
 	if (is_array($_GET) && $_POST["persistformvar"] != "true") {
-		$message_uuid = check_str($_GET["id"]);
+		$message_uuid = $_GET["id"];
 		$sql = "select * from v_messages ";
-		$sql .= "where message_uuid = '$message_uuid' ";
-		//$sql .= "and domain_uuid = '$domain_uuid' ";
-		$prep_statement = $db->prepare(check_sql($sql));
-		$prep_statement->execute();
-		$result = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-		foreach ($result as &$row) {
+		$sql .= "where message_uuid = :message_uuid ";
+		$parameters['message_uuid'] = $message_uuid;
+		$database = new database;
+		$row = $database->select($sql, $parameters, 'row');
+		if (is_array($row) && @sizeof($row) != 0) {
 			$user_uuid = $row["user_uuid"];
 			$message_type = $row["message_type"];
 			$message_direction = $row["message_direction"];
@@ -165,51 +183,53 @@
 			$message_media_content = $row["message_media_content"];
 			$message_json = $row["message_json"];
 		}
-		unset ($prep_statement);
+		unset($sql, $parameters);
 	}
 
-//show the header
+//get the users
+	$sql = "select user_uuid, username from v_users ";
+	$sql .= "where domain_uuid = :domain_uuid ";
+	$sql .= "and user_enabled = 'true' ";
+	$sql .= "order by username asc ";
+	$parameters['domain_uuid'] = $_SESSION['domain_uuid'];
+	$database = new database;
+	$users = $database->select($sql, $parameters, 'all');
+	unset($sql, $parameters);
+
+//create token
+	$object = new token;
+	$token = $object->create($_SERVER['PHP_SELF']);
+
+//include the header
+	$document['title'] = $text['title-message'];
 	require_once "resources/header.php";
 
-//get the extensions
-	$sql = "select * from v_users ";
-	$sql .= "where domain_uuid = '".$_SESSION['domain_uuid']."' ";
-	$sql .= "and user_enabled = 'true' ";
-	$prep_statement = $db->prepare(check_sql($sql));
-	$prep_statement->execute();
-	$users = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-	unset ($prep_statement, $sql);
-
-//get the users
-	$sql = "SELECT user_uuid, username FROM v_users ";
-	$sql .= "WHERE domain_uuid = '".$_SESSION['domain_uuid']."' ";
-	$sql .= "ORDER by username asc ";
-	$prep_statement = $db->prepare(check_sql($sql));
-	$prep_statement->execute();
-	$users = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-
 //show the content
-	echo "<form name='frm' id='frm' method='post' action=''>\n";
-	echo "<table width='100%'  border='0' cellpadding='0' cellspacing='0'>\n";
+	echo "<form name='frm' id='frm' method='post'>\n";
+
+	echo "<div class='action_bar' id='action_bar'>\n";
+	echo "	<div class='heading'><b>".$text['title-message']."</b></div>\n";
+	echo "	<div class='actions'>\n";
+	echo button::create(['type'=>'button','label'=>$text['button-back'],'icon'=>$_SESSION['theme']['button_icon_back'],'id'=>'btn_back','link'=>'messages_log.php']);
+	if ($action == 'update' && permission_exists('message_delete')) {
+		echo button::create(['type'=>'submit','label'=>$text['button-delete'],'icon'=>$_SESSION['theme']['button_icon_delete'],'id'=>'btn_delete','name'=>'action','value'=>'delete','style'=>'margin-left: 15px;','onclick'=>"if (confirm('".$text['confirm-delete']."')) { document.getElementById('frm').submit(); } else { this.blur(); return false; }"]);
+	}
+	echo button::create(['type'=>'submit','label'=>$text['button-save'],'icon'=>$_SESSION['theme']['button_icon_save'],'id'=>'btn_save','style'=>'margin-left: 15px;']);
+	echo "	</div>\n";
+	echo "	<div style='clear: both;'></div>\n";
+	echo "</div>\n";
+
+	echo "<table width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
 
 	echo "<tr>\n";
-	echo "<td align='left' width='30%' nowrap='nowrap' valign='top'><b>".$text['title-message']."</b><br><br></td>\n";
-	echo "<td width='70%' align='right' valign='top'>\n";
-	echo "	<input type='button' class='btn' name='' alt='".$text['button-back']."' onclick=\"window.location='messages.php'\" value='".$text['button-back']."'>";
-	echo "	<input type='submit' class='btn' value='".$text['button-save']."'>";
-	echo "</td>\n";
-	echo "</tr>\n";
-
-	echo "<tr>\n";
-	echo "<td class='vncell' valign='top' align='left' nowrap='nowrap'>\n";
+	echo "<td width='30%' class='vncell' valign='top' align='left' nowrap='nowrap'>\n";
 	echo "	".$text['label-username']."\n";
 	echo "</td>\n";
-	echo "<td class='vtable' style='position: relative;' align='left'>\n";
+	echo "<td width='70%' class='vtable' style='position: relative;' align='left'>\n";
 	echo "	<select class='formfld' name='user_uuid'>\n";
 	echo "		<option value=''></option>\n";
 	foreach($users as $row) {
-		if ($row['user_uuid'] == $user_uuid) { $selected = "selected='selected'"; } else { $selected = ''; }
-		echo "		<option value='".escape($row['user_uuid'])."' $selected>".escape($row['username'])."</option>\n";
+		echo "		<option value='".escape($row['user_uuid'])."' ".($row['user_uuid'] == $user_uuid ? "selected='selected'" : null).">".escape($row['username'])."</option>\n";
 	}
 	echo "	</select>\n";
 	echo "<br />\n";
@@ -223,25 +243,9 @@
 	echo "</td>\n";
 	echo "<td class='vtable' style='position: relative;' align='left'>\n";
 	echo "	<select class='formfld' name='message_type'>\n";
-	echo "		<option value=''></option>\n";
-	if ($message_type == "sms") {
-		echo "		<option value='sms' selected='selected'>".$text['label-sms']."</option>\n";
-	}
-	else {
-		echo "		<option value='sms'>".$text['label-sms']."</option>\n";
-	}
-	if ($message_type == "mms") {
-		echo "		<option value='mms' selected='selected'>".$text['label-mms']."</option>\n";
-	}
-	else {
-		echo "		<option value='mms'>".$text['label-mms']."</option>\n";
-	}
-	if ($message_type == "chat") {
-		echo "		<option value='chat' selected='selected'>".$text['label-chat']."</option>\n";
-	}
-	else {
-		echo "		<option value='chat'>".$text['label-chat']."</option>\n";
-	}
+	echo "		<option value='sms' ".($message_type == 'sms' ? "selected='selected'" : null).">".$text['label-sms']."</option>\n";
+	echo "		<option value='mms' ".($message_type == 'mms' ? "selected='selected'" : null).">".$text['label-mms']."</option>\n";
+	echo "		<option value='chat' ".($message_type == 'chat' ? "selected='selected'" : null).">".$text['label-chat']."</option>\n";
 	echo "	</select>\n";
 	echo "<br />\n";
 	echo $text['description-message_type']."\n";
@@ -253,21 +257,10 @@
 	echo "	".$text['label-message_direction']."\n";
 	echo "</td>\n";
 	echo "<td class='vtable' style='position: relative;' align='left'>\n";
-		echo "	<select class='formfld' name='message_direction'>\n";
-		echo "		<option value=''></option>\n";
-		if ($message_direction == "receive") {
-			echo "		<option value='inbound' selected='selected'>".$text['label-receive']."</option>\n";
-		}
-		else {
-			echo "		<option value='inbound'>".$text['label-receive']."</option>\n";
-		}
-		if ($message_direction == "send") {
-			echo "		<option value='outbound' selected='selected'>".$text['label-send']."</option>\n";
-		}
-		else {
-			echo "		<option value='outbound'>".$text['label-send']."</option>\n";
-		}
-		echo "	</select>\n";
+	echo "	<select class='formfld' name='message_direction'>\n";
+	echo "		<option value='inbound' ".($message_direction == 'inbound' ? "selected='selected'" : null).">".$text['label-inbound']."</option>\n";
+	echo "		<option value='outbound' ".($message_direction == 'outbound' ? "selected='selected'" : null).">".$text['label-outbound']."</option>\n";
+	echo "	</select>\n";
 	echo "<br />\n";
 	echo $text['description-message_direction']."\n";
 	echo "</td>\n";
@@ -311,12 +304,12 @@
 	echo "	".$text['label-message_text']."\n";
 	echo "</td>\n";
 	echo "<td class='vtable' style='position: relative;' align='left'>\n";
-	echo "	<input class='formfld' type='text' name='message_text' maxlength='255' value=\"".escape($message_text)."\">\n";
+	echo "	<textarea class='formfld' style='min-width: 40%; height: 100px;' name='message_text'>".escape($message_text)."</textarea>\n";
 	echo "<br />\n";
 	echo $text['description-message_text']."\n";
 	echo "</td>\n";
 	echo "</tr>\n";
-	
+
 	if (strlen($message_media_type) > 0) {
 		echo "<tr>\n";
 		echo "<td class='vncell' valign='top' align='left' nowrap='nowrap'>\n";
@@ -376,15 +369,13 @@
 		echo "</tr>\n";
 	}
 
-	echo "	<tr>\n";
-	echo "		<td colspan='2' align='right'>\n";
-	echo "				<input type='hidden' name='message_uuid' value='".escape($message_uuid)."'>\n";
-	echo "				<input type='submit' class='btn' value='".$text['button-save']."'>\n";
-	echo "		</td>\n";
-	echo "	</tr>";
-	echo "</table>";
+	echo "</table>\n";
+	echo "<br /><br />\n";
+
+	echo "<input type='hidden' name='message_uuid' value='".escape($message_uuid)."'>\n";
+	echo "<input type='hidden' name='".$token['name']."' value='".$token['hash']."'>\n";
+
 	echo "</form>";
-	echo "<br /><br />";
 
 //include the footer
 	require_once "resources/footer.php";

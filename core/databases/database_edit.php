@@ -17,31 +17,35 @@
 
 	The Initial Developer of the Original Code is
 	Mark J Crane <markjcrane@fusionpbx.com>
-	Portions created by the Initial Developer are Copyright (C) 2008-2012
+	Portions created by the Initial Developer are Copyright (C) 2008-2020
 	the Initial Developer. All Rights Reserved.
 
 	Contributor(s):
 	Mark J Crane <markjcrane@fusionpbx.com>
 */
-require_once "root.php";
-require_once "resources/require.php";
-require_once "resources/check_auth.php";
-if (permission_exists('database_add') || permission_exists('database_edit')) {
-	//access granted
-}
-else {
-	echo "access denied";
-	exit;
-}
+
+//includes
+	require_once "root.php";
+	require_once "resources/require.php";
+	require_once "resources/check_auth.php";
+
+//check permissions
+	if (permission_exists('database_add') || permission_exists('database_edit')) {
+		//access granted
+	}
+	else {
+		echo "access denied";
+		exit;
+	}
 
 //add multi-lingual support
 	$language = new text;
 	$text = $language->get();
 
 //action add or update
-	if (isset($_REQUEST["id"])) {
+	if (is_uuid($_REQUEST["id"])) {
 		$action = "update";
-		$database_uuid = check_str($_REQUEST["id"]);
+		$database_uuid = $_REQUEST["id"];
 	}
 	else {
 		$action = "add";
@@ -60,23 +64,46 @@ else {
 
 //get http post variables and set them to php variables
 	if (count($_POST)>0) {
-		$database_driver = check_str($_POST["database_driver"]);
-		$database_type = check_str($_POST["database_type"]);
-		$database_host = check_str($_POST["database_host"]);
-		$database_port = check_str($_POST["database_port"]);
-		$database_name = check_str($_POST["database_name"]);
-		$database_username = check_str($_POST["database_username"]);
-		$database_password = check_str($_POST["database_password"]);
-		$database_path = check_str($_POST["database_path"]);
-		$database_description = check_str($_POST["database_description"]);
+		$database_driver = $_POST["database_driver"];
+		$database_type = $_POST["database_type"];
+		$database_host = $_POST["database_host"];
+		$database_port = $_POST["database_port"];
+		$database_name = $_POST["database_name"];
+		$database_username = $_POST["database_username"];
+		$database_password = $_POST["database_password"];
+		$database_path = $_POST["database_path"];
+		$database_description = $_POST["database_description"];
 	}
 
 if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 
 	$msg = '';
 	if ($action == "update") {
-		$database_uuid = check_str($_POST["database_uuid"]);
+		$database_uuid = $_POST["database_uuid"];
 	}
+
+	//delete the database
+		if (permission_exists('database_delete')) {
+			if ($_POST['action'] == 'delete' && is_uuid($database_uuid)) {
+				//prepare
+					$array[0]['checked'] = 'true';
+					$array[0]['uuid'] = $database_uuid;
+				//delete
+					$obj = new databases;
+					$obj->delete($array);
+				//redirect
+					header('Location: databases.php');
+					exit;
+			}
+		}
+
+	//validate the token
+		$token = new token;
+		if (!$token->validate($_SERVER['PHP_SELF'])) {
+			message::add($text['message-invalid_token'],'negative');
+			header('Location: databases.php');
+			exit;
+		}
 
 	//check for all required data
 		//if (strlen($database_driver) == 0) { $msg .= $text['message-required'].$text['label-driver']."<br>\n"; }
@@ -103,39 +130,27 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 
 	//add or update the database
 	if ($_POST["persistformvar"] != "true") {
+
+		//begin array
+			$array['databases'][0]['database_driver'] = $database_driver;
+			$array['databases'][0]['database_type'] = $database_type;
+			$array['databases'][0]['database_host'] = $database_host;
+			$array['databases'][0]['database_port'] = $database_port;
+			$array['databases'][0]['database_name'] = $database_name;
+			$array['databases'][0]['database_username'] = $database_username;
+			$array['databases'][0]['database_password'] = $database_password;
+			$array['databases'][0]['database_path'] = $database_path;
+			$array['databases'][0]['database_description'] = $database_description;
+
 		if ($action == "add") {
-			//add the data
-				$database_uuid = uuid();
-				$sql = "insert into v_databases ";
-				$sql .= "(";
-				//$sql .= "domain_uuid, ";
-				$sql .= "database_uuid, ";
-				$sql .= "database_driver, ";
-				$sql .= "database_type, ";
-				$sql .= "database_host, ";
-				$sql .= "database_port, ";
-				$sql .= "database_name, ";
-				$sql .= "database_username, ";
-				$sql .= "database_password, ";
-				$sql .= "database_path, ";
-				$sql .= "database_description ";
-				$sql .= ")";
-				$sql .= "values ";
-				$sql .= "(";
-				//$sql .= "'$domain_uuid', ";
-				$sql .= "'$database_uuid', ";
-				$sql .= "'$database_driver', ";
-				$sql .= "'$database_type', ";
-				$sql .= "'$database_host', ";
-				$sql .= "'$database_port', ";
-				$sql .= "'$database_name', ";
-				$sql .= "'$database_username', ";
-				$sql .= "'$database_password', ";
-				$sql .= "'$database_path', ";
-				$sql .= "'$database_description' ";
-				$sql .= ")";
-				$db->exec(check_sql($sql));
-				unset($sql);
+			//add new uuid
+				$array['databases'][0]['database_uuid'] = uuid();
+
+				$database = new database;
+				$database->app_name = 'databases';
+				$database->app_uuid = '8d229b6d-1383-fcec-74c6-4ce1682479e2';
+				$database->save($array);
+				unset($array);
 
 			//set the defaults
 				require_once "app_defaults.php";
@@ -143,24 +158,18 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 			//redirect the browser
 				message::add($text['message-add']);
 				header("Location: databases.php");
-				return;
-		} //if ($action == "add")
+				exit;
+		}
 
 		if ($action == "update") {
-			//udpate the database
-				$sql = "update v_databases set ";
-				$sql .= "database_type = '$database_type', ";
-				$sql .= "database_driver = '$database_driver', ";
-				$sql .= "database_host = '$database_host', ";
-				$sql .= "database_port = '$database_port', ";
-				$sql .= "database_name = '$database_name', ";
-				$sql .= "database_username = '$database_username', ";
-				$sql .= "database_password = '$database_password', ";
-				$sql .= "database_path = '$database_path', ";
-				$sql .= "database_description = '$database_description' ";
-				$sql .= "where database_uuid = '$database_uuid' ";
-				$db->exec(check_sql($sql));
-				unset($sql);
+			//add uuid to update
+				$array['databases'][0]['database_uuid'] = $database_uuid;
+
+				$database = new database;
+				$database->app_name = 'databases';
+				$database->app_uuid = '8d229b6d-1383-fcec-74c6-4ce1682479e2';
+				$database->save($array);
+				unset($array);
 
 			//set the defaults
 				$domains_processed = 1;
@@ -169,20 +178,20 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 			//redirect the browser
 				message::add($text['message-update']);
 				header("Location: databases.php");
-				return;
-		} //if ($action == "update")
-	} //if ($_POST["persistformvar"] != "true")
-} //(count($_POST)>0 && strlen($_POST["persistformvar"]) == 0)
+				exit;
+		}
+	}
+}
 
 //pre-populate the form
 	if (count($_GET)>0 && $_POST["persistformvar"] != "true") {
 		$database_uuid = $_GET["id"];
 		$sql = "select * from v_databases ";
-		$sql .= "where database_uuid = '$database_uuid' ";
-		$prep_statement = $db->prepare(check_sql($sql));
-		$prep_statement->execute();
-		$result = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-		foreach ($result as &$row) {
+		$sql .= "where database_uuid = :database_uuid ";
+		$parameters['database_uuid'] = $database_uuid;
+		$database = new database;
+		$row = $database->select($sql, $parameters, 'row');
+		if (is_array($row) && sizeof($row) != 0) {
 			$database_driver = $row["database_driver"];
 			$database_type = $row["database_type"];
 			$database_host = $row["database_host"];
@@ -192,52 +201,60 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 			$database_password = $row["database_password"];
 			$database_path = $row["database_path"];
 			$database_description = $row["database_description"];
-			break; //limit to 1 row
 		}
-		unset ($prep_statement);
+		unset($sql, $parameters, $row);
 	}
 
-//show the header
-	require_once "resources/header.php";
+//create token
+	$object = new token;
+	$token = $object->create($_SERVER['PHP_SELF']);
+
+//include the header
 	if ($action == "update") {
 		$document['title'] = $text['title-database-edit'];
 	}
 	if ($action == "add") {
 		$document['title'] = $text['title-database-add'];
 	}
+	require_once "resources/header.php";
 
 //show the content
-	echo "<form method='post' name='frm' action=''>\n";
-	echo "<table width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
-	echo "<tr>\n";
+	echo "<form method='post' name='frm' id='frm'>\n";
+
+	echo "<div class='action_bar' id='action_bar'>\n";
+	echo "	<div class='heading'>";
 	if ($action == "add") {
-		echo "<td align=\"left\" width='30%' nowrap=\"nowrap\"><b>".$text['header-database-add']."</b></td>\n";
+		echo "<b>".$text['header-database-add']."</b>";
 	}
 	if ($action == "update") {
-		echo "<td align=\"left\" width='30%' nowrap=\"nowrap\"><b>".$text['header-database-edit']."</b></td>\n";
+		echo "<b>".$text['header-database-edit']."</b>";
 	}
-	echo "<td width='70%' align=\"right\">";
-	echo "	<input type='button' class='btn' name='' alt='".$text['button-back']."' onclick=\"window.location='databases.php'\" value='".$text['button-back']."'>";
-	echo "	<input type='submit' name='submit' class='btn' value='".$text['button-save']."'>\n";
-	echo "</td>\n";
-	echo "</tr>\n";
-	echo "<tr>\n";
-	echo "<td align=\"left\" colspan='2'>\n";
+	echo "	</div>\n";
+	echo "	<div class='actions'>\n";
+	echo button::create(['type'=>'button','label'=>$text['button-back'],'icon'=>$_SESSION['theme']['button_icon_back'],'id'=>'btn_back','style'=>'margin-right: 15px;','link'=>'databases.php']);
+	if ($action == 'update' && permission_exists('database_delete')) {
+		echo button::create(['type'=>'submit','label'=>$text['button-delete'],'icon'=>$_SESSION['theme']['button_icon_delete'],'id'=>'btn_delete','name'=>'action','value'=>'delete','onclick'=>"if (confirm('".$text['confirm-delete']."')) { document.getElementById('frm').submit(); } else { this.blur(); return false; }",'style'=>'margin-right: 15px;']);
+	}
+	echo button::create(['type'=>'submit','label'=>$text['button-save'],'icon'=>$_SESSION['theme']['button_icon_save'],'id'=>'btn_save','name'=>'action','value'=>'save']);
+	echo "	</div>\n";
+	echo "	<div style='clear: both;'></div>\n";
+	echo "</div>\n";
+
 	if ($action == "add") {
-		echo $text['description-database-add'];
+		echo $text['description-database-add']."\n";
 	}
 	if ($action == "update") {
-		echo $text['description-database-edit'];
+		echo $text['description-database-edit']."\n";
 	}
 	echo "<br /><br />\n";
-	echo "</td>\n";
-	echo "</tr>\n";
+
+	echo "<table width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
 
 	echo "<tr>\n";
-	echo "<td class='vncell' valign='top' align='left' nowrap='nowrap'>\n";
+	echo "<td width='30%' class='vncell' valign='top' align='left' nowrap='nowrap'>\n";
 	echo "	".$text['label-driver']."\n";
 	echo "</td>\n";
-	echo "<td class='vtable' align='left'>\n";
+	echo "<td width='70%' class='vtable' align='left'>\n";
 	echo "	<select class='formfld' name='database_driver'>\n";
 	echo "	<option value=''></option>\n";
 	if ($database_driver == "sqlite") {
@@ -383,19 +400,18 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 	echo $text['description-description']."\n";
 	echo "</td>\n";
 	echo "</tr>\n";
-	echo "	<tr>\n";
-	echo "		<td colspan='2' align='right'>\n";
-	if ($action == "update") {
-		echo "		<input type='hidden' name='database_uuid' value='".escape($database_uuid)."'>\n";
-	}
-	echo "			<br>";
-	echo "			<input type='submit' name='submit' class='btn' value='".$text['button-save']."'>\n";
-	echo "		</td>\n";
-	echo "	</tr>";
+
 	echo "</table>";
 	echo "<br><br>";
+
+	if ($action == "update") {
+		echo "<input type='hidden' name='database_uuid' value='".escape($database_uuid)."'>\n";
+	}
+	echo "<input type='hidden' name='".$token['name']."' value='".$token['hash']."'>\n";
+
 	echo "</form>";
 
 //include the footer
 	require_once "resources/footer.php";
+
 ?>

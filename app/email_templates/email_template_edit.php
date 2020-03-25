@@ -24,9 +24,9 @@
 //includes
 	require_once "root.php";
 	require_once "resources/require.php";
+	require_once "resources/check_auth.php";
 
 //check permissions
-	require_once "resources/check_auth.php";
 	if (permission_exists('email_template_add') || permission_exists('email_template_edit')) {
 		//access granted
 	}
@@ -40,9 +40,9 @@
 	$text = $language->get();
 
 //action add or update
-	if (isset($_REQUEST["id"])) {
+	if (is_uuid($_REQUEST["id"])) {
 		$action = "update";
-		$email_template_uuid = check_str($_REQUEST["id"]);
+		$email_template_uuid = $_REQUEST["id"];
 	}
 	else {
 		$action = "add";
@@ -50,15 +50,15 @@
 
 //get http post variables and set them to php variables
 	if (is_array($_POST)) {
-		$domain_uuid = check_str($_POST["domain_uuid"]);
-		$template_language = check_str($_POST["template_language"]);
-		$template_category = check_str($_POST["template_category"]);
-		$template_subcategory = check_str($_POST["template_subcategory"]);
-		$template_subject = check_str($_POST["template_subject"]);
-		$template_body = check_str($_POST["template_body"]);
-		$template_type = check_str($_POST["template_type"]);
-		$template_enabled = check_str($_POST["template_enabled"]);
-		$template_description = check_str($_POST["template_description"]);
+		$domain_uuid = $_POST["domain_uuid"];
+		$template_language = $_POST["template_language"];
+		$template_category = $_POST["template_category"];
+		$template_subcategory = $_POST["template_subcategory"];
+		$template_subject = $_POST["template_subject"];
+		$template_body = $_POST["template_body"];
+		$template_type = $_POST["template_type"];
+		$template_enabled = $_POST["template_enabled"];
+		$template_description = $_POST["template_description"];
 	}
 
 //process the user data and save it to the database
@@ -66,7 +66,15 @@
 
 		//get the uuid from the POST
 			if ($action == "update") {
-				$email_template_uuid = check_str($_POST["email_template_uuid"]);
+				$email_template_uuid = $_POST["email_template_uuid"];
+			}
+
+		//validate the token
+			$token = new token;
+			if (!$token->validate($_SERVER['PHP_SELF'])) {
+				message::add($text['message-invalid_token'],'negative');
+				header('Location: email_templates.php');
+				exit;
 			}
 
 		//check for all required data
@@ -94,53 +102,56 @@
 			}
 
 		//add the email_template_uuid
-			if (strlen($_POST["email_template_uuid"]) == 0) {
+			if (!is_uuid($_POST["email_template_uuid"])) {
 				$email_template_uuid = uuid();
-				$_POST["email_template_uuid"] = $email_template_uuid;
 			}
 
 		//prepare the array
-			$array['email_templates'][0] = $_POST;
+			$array['email_templates'][0]['domain_uuid'] = $domain_uuid;
+			$array['email_templates'][0]['email_template_uuid'] = $email_template_uuid;
+			$array['email_templates'][0]['template_language'] = $template_language;
+			$array['email_templates'][0]['template_category'] = $template_category;
+			$array['email_templates'][0]['template_subcategory'] = $template_subcategory;
+			$array['email_templates'][0]['template_subject'] = $template_subject;
+			$array['email_templates'][0]['template_body'] = $template_body;
+			$array['email_templates'][0]['template_type'] = $template_type;
+			$array['email_templates'][0]['template_enabled'] = $template_enabled;
+			$array['email_templates'][0]['template_description'] = $template_description;
 
 		//save to the data
 			$database = new database;
 			$database->app_name = 'email_templates';
-			$database->app_uuid = null;
+			$database->app_uuid = '8173e738-2523-46d5-8943-13883befd2fd';
 			if (strlen($email_template_uuid) > 0) {
 				$database->uuid($email_template_uuid);
 			}
 			$database->save($array);
 			$message = $database->message;
 
-		//debug info
-			//echo "<pre>";
-			//print_r($message);
-			//echo "</pre>";
-			//exit;
-
 		//redirect the user
 			if (isset($action)) {
 				if ($action == "add") {
-					$_SESSION["message"] = $text['message-add'];
+					message::add($text['message-add']);
 				}
 				if ($action == "update") {
-					$_SESSION["message"] = $text['message-update'];
+					message::add($text['message-update']);
 				}
 				header('Location: email_template_edit.php?id='.escape($email_template_uuid));
-				return;
+				exit;
 			}
-	} //(is_array($_POST) && strlen($_POST["persistformvar"]) == 0)
+	}
 
 //pre-populate the form
 	if (is_array($_GET) && $_POST["persistformvar"] != "true") {
-		$email_template_uuid = check_str($_GET["id"]);
+		$email_template_uuid = $_GET["id"];
 		$sql = "select * from v_email_templates ";
-		$sql .= "where email_template_uuid = '$email_template_uuid' ";
-		//$sql .= "and domain_uuid = '$domain_uuid' ";
-		$prep_statement = $db->prepare(check_sql($sql));
-		$prep_statement->execute();
-		$result = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-		foreach ($result as &$row) {
+		$sql .= "where email_template_uuid = :email_template_uuid ";
+		//$sql .= "and domain_uuid = :domain_uuid ";
+		$parameters['email_template_uuid'] = $email_template_uuid;
+		//$parameters['domain_uuid'] = $domain_uuid;
+		$database = new database;
+		$row = $database->select($sql, $parameters, 'row');
+		if (is_array($row) && @sizeof($row) != 0) {
 			$domain_uuid = $row["domain_uuid"];
 			$template_language = $row["template_language"];
 			$template_category = $row["template_category"];
@@ -151,29 +162,36 @@
 			$template_enabled = $row["template_enabled"];
 			$template_description = $row["template_description"];
 		}
-		unset ($prep_statement);
+		unset($sql, $parameters, $row);
 	}
 
-//show the header
+//create token
+	$object = new token;
+	$token = $object->create($_SERVER['PHP_SELF']);
+
+//include the header
+	$document['title'] = $text['title-email_template'];
 	require_once "resources/header.php";
 
 //show the content
-	echo "<form name='frm' id='frm' method='post' action=''>\n";
-	echo "<table width='100%'  border='0' cellpadding='0' cellspacing='0'>\n";
+	echo "<form name='frm' id='frm' method='post'>\n";
+
+	echo "<div class='action_bar' id='action_bar'>\n";
+	echo "	<div class='heading'><b>".$text['title-email_template']."</b></div>\n";
+	echo "	<div class='actions'>\n";
+	echo button::create(['type'=>'button','label'=>$text['button-back'],'icon'=>$_SESSION['theme']['button_icon_back'],'id'=>'btn_back','style'=>'margin-right: 15px;','link'=>'email_templates.php']);
+	echo button::create(['type'=>'submit','label'=>$text['button-save'],'icon'=>$_SESSION['theme']['button_icon_save'],'id'=>'btn_save']);
+	echo "	</div>\n";
+	echo "	<div style='clear: both;'></div>\n";
+	echo "</div>\n";
+
+	echo "<table width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
 
 	echo "<tr>\n";
-	echo "<td align='left' width='30%' nowrap='nowrap' valign='top'><b>".$text['title-email_template']."</b><br><br></td>\n";
-	echo "<td width='70%' align='right' valign='top'>\n";
-	echo "	<input type='button' class='btn' name='' alt='".$text['button-back']."' onclick=\"window.location='email_templates.php'\" value='".$text['button-back']."'>";
-	echo "	<input type='submit' class='btn' value='".$text['button-save']."'>";
-	echo "</td>\n";
-	echo "</tr>\n";
-
-	echo "<tr>\n";
-	echo "<td class='vncellreq' valign='top' align='left' nowrap='nowrap'>\n";
+	echo "<td width='30%' class='vncellreq' valign='top' align='left' nowrap='nowrap'>\n";
 	echo "	".$text['label-template_language']."\n";
 	echo "</td>\n";
-	echo "<td class='vtable' style='position: relative;' align='left'>\n";
+	echo "<td width='70%' class='vtable' style='position: relative;' align='left'>\n";
 	echo "	<input class='formfld' type='text' name='template_language' maxlength='255' value=\"".escape($template_language)."\">\n";
 	echo "<br />\n";
 	echo $text['description-template_language']."\n";
@@ -218,7 +236,7 @@
 	echo "	".$text['label-template_body']."\n";
 	echo "</td>\n";
 	echo "<td class='vtable' style='position: relative;' align='left'>\n";
-	echo "	<textarea class='formfld' name='template_body' rows='8' style='width: 100%'>".escape($template_body)."</textarea>\n";
+	echo "	<textarea class='formfld' name='template_body' style='min-width: 100%; height: 350px; font-family: monospace;'>".$template_body."</textarea>\n";
 	echo "<br />\n";
 	echo $text['description-template_body']."\n";
 	echo "</td>\n";
@@ -230,7 +248,7 @@
 	echo "</td>\n";
 	echo "<td class='vtable' style='position: relative;' align='left'>\n";
 	echo "	<select class='formfld' name='domain_uuid'>\n";
-	if (strlen($domain_uuid) == 0) {
+	if (!is_uuid($domain_uuid)) {
 		echo "		<option value='' selected='selected'>".$text['label-global']."</option>\n";
 	}
 	else {
@@ -255,7 +273,10 @@
 	echo "	".$text['label-template_type']."\n";
 	echo "</td>\n";
 	echo "<td class='vtable' style='position: relative;' align='left'>\n";
-	echo "	<input class='formfld' type='text' name='template_type' maxlength='255' value=\"".escape($template_type)."\">\n";
+	echo "	<select class='formfld' name='template_type'>\n";
+	echo "		<option value='html'>HTML</option>\n";
+	echo "		<option value='text' ".($template_type == 'text' ? "selected='selected'" : null).">".$text['label-template_text']."</option>\n";
+	echo "	</select>\n";
 	echo "<br />\n";
 	echo $text['description-template_type']."\n";
 	echo "</td>\n";
@@ -267,7 +288,6 @@
 	echo "</td>\n";
 	echo "<td class='vtable' style='position: relative;' align='left'>\n";
 	echo "	<select class='formfld' name='template_enabled'>\n";
-	echo "		<option value=''></option>\n";
 	if ($template_enabled == "true") {
 		echo "		<option value='true' selected='selected'>".$text['label-true']."</option>\n";
 	}
@@ -297,17 +317,15 @@
 	echo "</td>\n";
 	echo "</tr>\n";
 
-	echo "	<tr>\n";
-	echo "		<td colspan='2' align='right'>\n";
-	if ($action == "update") {
-		echo "				<input type='hidden' name='email_template_uuid' value='".escape($email_template_uuid)."'>\n";
-	}
-	echo "				<input type='submit' class='btn' value='".$text['button-save']."'>\n";
-	echo "		</td>\n";
-	echo "	</tr>";
 	echo "</table>";
-	echo "</form>";
 	echo "<br /><br />";
+
+	if ($action == "update") {
+		echo "<input type='hidden' name='email_template_uuid' value='".escape($email_template_uuid)."'>\n";
+	}
+	echo "<input type='hidden' name='".$token['name']."' value='".$token['hash']."'>\n";
+
+	echo "</form>";
 
 //include the footer
 	require_once "resources/footer.php";

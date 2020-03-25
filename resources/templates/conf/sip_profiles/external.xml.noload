@@ -58,10 +58,14 @@
 		<param name="force-register-db-domain" value="$${domain}" enabled="false"/>
 		<!-- ************************************************* -->
 
+		<!-- suppress CNG on this profile or per call with the 'suppress_cng' variable -->
+		<param name="suppress-cng" value="true" enabled="true"/>
+
 		<!--<param name="aggressive-nat-detection" value="true"/>-->
 		<param name="inbound-codec-negotiation" value="generous"/>
 		<param name="nonce-ttl" value="60"/>
 		<param name="auth-calls" value="true"/>
+		<param name="auth-subscriptions" value="true"/>
 		<!--
 		DO NOT USE HOSTNAMES, ONLY IP ADDRESSES IN THESE SETTINGS!
 		-->

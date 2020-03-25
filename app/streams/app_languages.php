@@ -2,14 +2,15 @@
 
 	//Streams
 		$text['title-streams']['en-us'] = 'Streams';
+		$text['title-streams']['en-gb'] = 'Streams';
 		$text['title-streams']['ar-eg'] = '';
 		$text['title-streams']['de-at'] = '';
 		$text['title-streams']['de-ch'] = '';
 		$text['title-streams']['de-de'] = '';
 		$text['title-streams']['es-cl'] = '';
 		$text['title-streams']['es-mx'] = '';
-		$text['title-streams']['fr-ca'] = '';
-		$text['title-streams']['fr-fr'] = '';
+		$text['title-streams']['fr-ca'] = 'Courants';
+		$text['title-streams']['fr-fr'] = 'Courants';
 		$text['title-streams']['he-il'] = '';
 		$text['title-streams']['it-it'] = '';
 		$text['title-streams']['nl-nl'] = '';
@@ -22,14 +23,15 @@
 		$text['title-streams']['uk-ua'] = '';
 
 		$text['title-stream']['en-us'] = 'Stream';
+		$text['title-stream']['en-gb'] = 'Stream';
 		$text['title-stream']['ar-eg'] = '';
 		$text['title-stream']['de-at'] = '';
 		$text['title-stream']['de-ch'] = '';
 		$text['title-stream']['de-de'] = '';
 		$text['title-stream']['es-cl'] = '';
 		$text['title-stream']['es-mx'] = '';
-		$text['title-stream']['fr-ca'] = '';
-		$text['title-stream']['fr-fr'] = '';
+		$text['title-stream']['fr-ca'] = 'Courant';
+		$text['title-stream']['fr-fr'] = 'Courant';
 		$text['title-stream']['he-il'] = '';
 		$text['title-stream']['it-it'] = '';
 		$text['title-stream']['nl-nl'] = '';
@@ -42,14 +44,15 @@
 		$text['title-stream']['uk-ua'] = '';
 
 		$text['title_description-stream']['en-us'] = 'Define details for streaming audio.';
+		$text['title_description-stream']['en-gb'] = 'Define details for streaming audio.';
 		$text['title_description-stream']['ar-eg'] = '';
 		$text['title_description-stream']['de-at'] = '';
 		$text['title_description-stream']['de-ch'] = '';
 		$text['title_description-stream']['de-de'] = '';
 		$text['title_description-stream']['es-cl'] = '';
 		$text['title_description-stream']['es-mx'] = '';
-		$text['title_description-stream']['fr-ca'] = '';
-		$text['title_description-stream']['fr-fr'] = '';
+		$text['title_description-stream']['fr-ca'] = 'Définir les détails pour le streaming audio';
+		$text['title_description-stream']['fr-fr'] = 'Définir les détails pour le streaming audio';
 		$text['title_description-stream']['he-il'] = '';
 		$text['title_description-stream']['it-it'] = '';
 		$text['title_description-stream']['nl-nl'] = '';
@@ -62,14 +65,15 @@
 		$text['title_description-stream']['uk-ua'] = '';
 
 		$text['label-stream_name']['en-us'] = 'Name';
+		$text['label-stream_name']['en-gb'] = 'Name';
 		$text['label-stream_name']['ar-eg'] = '';
 		$text['label-stream_name']['de-at'] = '';
 		$text['label-stream_name']['de-ch'] = '';
 		$text['label-stream_name']['de-de'] = '';
 		$text['label-stream_name']['es-cl'] = '';
 		$text['label-stream_name']['es-mx'] = '';
-		$text['label-stream_name']['fr-ca'] = '';
-		$text['label-stream_name']['fr-fr'] = '';
+		$text['label-stream_name']['fr-ca'] = 'Nom';
+		$text['label-stream_name']['fr-fr'] = 'Nom';
 		$text['label-stream_name']['he-il'] = '';
 		$text['label-stream_name']['it-it'] = '';
 		$text['label-stream_name']['nl-nl'] = '';
@@ -82,14 +86,15 @@
 		$text['label-stream_name']['uk-ua'] = '';
 
 		$text['description-stream_name']['en-us'] = 'Enter the name.';
+		$text['description-stream_name']['en-gb'] = 'Enter the name.';
 		$text['description-stream_name']['ar-eg'] = '';
 		$text['description-stream_name']['de-at'] = '';
 		$text['description-stream_name']['de-ch'] = '';
 		$text['description-stream_name']['de-de'] = '';
 		$text['description-stream_name']['es-cl'] = '';
 		$text['description-stream_name']['es-mx'] = '';
-		$text['description-stream_name']['fr-ca'] = '';
-		$text['description-stream_name']['fr-fr'] = '';
+		$text['description-stream_name']['fr-ca'] = 'Entrez le nom';
+		$text['description-stream_name']['fr-fr'] = 'Entrez le nom';
 		$text['description-stream_name']['he-il'] = '';
 		$text['description-stream_name']['it-it'] = '';
 		$text['description-stream_name']['nl-nl'] = '';
@@ -102,14 +107,15 @@
 		$text['description-stream_name']['uk-ua'] = '';
 
 		$text['label-stream_location']['en-us'] = 'Location';
+		$text['label-stream_location']['en-gb'] = 'Location';
 		$text['label-stream_location']['ar-eg'] = '';
 		$text['label-stream_location']['de-at'] = '';
 		$text['label-stream_location']['de-ch'] = '';
 		$text['label-stream_location']['de-de'] = '';
 		$text['label-stream_location']['es-cl'] = '';
 		$text['label-stream_location']['es-mx'] = '';
-		$text['label-stream_location']['fr-ca'] = '';
-		$text['label-stream_location']['fr-fr'] = '';
+		$text['label-stream_location']['fr-ca'] = 'Emplacement';
+		$text['label-stream_location']['fr-fr'] = 'Emplacement';
 		$text['label-stream_location']['he-il'] = '';
 		$text['label-stream_location']['it-it'] = '';
 		$text['label-stream_location']['nl-nl'] = '';
@@ -122,14 +128,15 @@
 		$text['label-stream_location']['uk-ua'] = '';
 
 		$text['description-stream_location']['en-us'] = 'Enter the location.';
+		$text['description-stream_location']['en-gb'] = 'Enter the location.';
 		$text['description-stream_location']['ar-eg'] = '';
 		$text['description-stream_location']['de-at'] = '';
 		$text['description-stream_location']['de-ch'] = '';
 		$text['description-stream_location']['de-de'] = '';
 		$text['description-stream_location']['es-cl'] = '';
 		$text['description-stream_location']['es-mx'] = '';
-		$text['description-stream_location']['fr-ca'] = '';
-		$text['description-stream_location']['fr-fr'] = '';
+		$text['description-stream_location']['fr-ca'] = "entrez l'emplacement";
+		$text['description-stream_location']['fr-fr'] = "entrez l'emplacement";
 		$text['description-stream_location']['he-il'] = '';
 		$text['description-stream_location']['it-it'] = '';
 		$text['description-stream_location']['nl-nl'] = '';
@@ -142,14 +149,15 @@
 		$text['description-stream_location']['uk-ua'] = '';
 
 		$text['label-stream_enabled']['en-us'] = 'Enabled';
+		$text['label-stream_enabled']['en-gb'] = 'Enabled';
 		$text['label-stream_enabled']['ar-eg'] = '';
 		$text['label-stream_enabled']['de-at'] = '';
 		$text['label-stream_enabled']['de-ch'] = '';
 		$text['label-stream_enabled']['de-de'] = '';
 		$text['label-stream_enabled']['es-cl'] = '';
 		$text['label-stream_enabled']['es-mx'] = '';
-		$text['label-stream_enabled']['fr-ca'] = '';
-		$text['label-stream_enabled']['fr-fr'] = '';
+		$text['label-stream_enabled']['fr-ca'] = 'Activé';
+		$text['label-stream_enabled']['fr-fr'] = 'Activé';
 		$text['label-stream_enabled']['he-il'] = '';
 		$text['label-stream_enabled']['it-it'] = '';
 		$text['label-stream_enabled']['nl-nl'] = '';
@@ -162,14 +170,15 @@
 		$text['label-stream_enabled']['uk-ua'] = '';
 
 		$text['description-stream_enabled']['en-us'] = 'Enable or disable this stream. ';
+		$text['description-stream_enabled']['en-gb'] = 'Enable or disable this stream. ';
 		$text['description-stream_enabled']['ar-eg'] = '';
 		$text['description-stream_enabled']['de-at'] = '';
 		$text['description-stream_enabled']['de-ch'] = '';
 		$text['description-stream_enabled']['de-de'] = '';
 		$text['description-stream_enabled']['es-cl'] = '';
 		$text['description-stream_enabled']['es-mx'] = '';
-		$text['description-stream_enabled']['fr-ca'] = '';
-		$text['description-stream_enabled']['fr-fr'] = '';
+		$text['description-stream_enabled']['fr-ca'] = 'Activer ou désactiver ce courant';
+		$text['description-stream_enabled']['fr-fr'] = 'Activer ou désactiver ce courant';
 		$text['description-stream_enabled']['he-il'] = '';
 		$text['description-stream_enabled']['it-it'] = '';
 		$text['description-stream_enabled']['nl-nl'] = '';
@@ -182,14 +191,15 @@
 		$text['description-stream_enabled']['uk-ua'] = '';
 
 		$text['label-stream_description']['en-us'] = 'Description';
+		$text['label-stream_description']['en-gb'] = 'Description';
 		$text['label-stream_description']['ar-eg'] = '';
 		$text['label-stream_description']['de-at'] = '';
 		$text['label-stream_description']['de-ch'] = '';
 		$text['label-stream_description']['de-de'] = '';
 		$text['label-stream_description']['es-cl'] = '';
 		$text['label-stream_description']['es-mx'] = '';
-		$text['label-stream_description']['fr-ca'] = '';
-		$text['label-stream_description']['fr-fr'] = '';
+		$text['label-stream_description']['fr-ca'] = 'Description';
+		$text['label-stream_description']['fr-fr'] = 'Description';
 		$text['label-stream_description']['he-il'] = '';
 		$text['label-stream_description']['it-it'] = '';
 		$text['label-stream_description']['nl-nl'] = '';
@@ -202,14 +212,15 @@
 		$text['label-stream_description']['uk-ua'] = '';
 
 		$text['description-stream_description']['en-us'] = 'Enter the description.';
+		$text['description-stream_description']['en-gb'] = 'Enter the description.';
 		$text['description-stream_description']['ar-eg'] = '';
 		$text['description-stream_description']['de-at'] = '';
 		$text['description-stream_description']['de-ch'] = '';
 		$text['description-stream_description']['de-de'] = '';
 		$text['description-stream_description']['es-cl'] = '';
 		$text['description-stream_description']['es-mx'] = '';
-		$text['description-stream_description']['fr-ca'] = '';
-		$text['description-stream_description']['fr-fr'] = '';
+		$text['description-stream_description']['fr-ca'] = 'Entrez la description';
+		$text['description-stream_description']['fr-fr'] = 'Entrez la description';
 		$text['description-stream_description']['he-il'] = '';
 		$text['description-stream_description']['it-it'] = '';
 		$text['description-stream_description']['nl-nl'] = '';

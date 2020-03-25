@@ -17,7 +17,7 @@
 
 	The Initial Developer of the Original Code is
 	Mark J Crane <markjcrane@fusionpbx.com>
-	Portions created by the Initial Developer are Copyright (C) 2008-2018
+	Portions created by the Initial Developer are Copyright (C) 2008-2020
 	the Initial Developer. All Rights Reserved.
 
 	Contributor(s):
@@ -29,9 +29,10 @@
 */
 
 //includes
-	include "root.php";
+	require_once "root.php";
 	require_once "resources/require.php";
 	require_once "resources/check_auth.php";
+	require_once "resources/paging.php";
 
 //check permissions
 	if (permission_exists('outbound_route_add')) {
@@ -46,27 +47,22 @@
 	$language = new text;
 	$text = $language->get();
 
-//show the header
-	require_once "resources/header.php";
-	$document['title'] = $text['title-dialplan-outbound-add'];
-	require_once "resources/paging.php";
-
 //get the http post values and set theme as php variables
 	if (is_array($_POST) > 0) {
 		//set the variables
-			$dialplan_name = check_str($_POST["dialplan_name"]);
-			$dialplan_order = check_str($_POST["dialplan_order"]);
-			$dialplan_expression = check_str($_POST["dialplan_expression"]);
-			$prefix_number = check_str($_POST["prefix_number"]);
-			$condition_field_1 = check_str($_POST["condition_field_1"]);
-			$condition_expression_1 = check_str($_POST["condition_expression_1"]);
-			$condition_field_2 = check_str($_POST["condition_field_2"]);
-			$condition_expression_2 = check_str($_POST["condition_expression_2"]);
-			$gateway = check_str($_POST["gateway"]);
-			$limit = check_str($_POST["limit"]);
-			$accountcode = check_str($_POST["accountcode"]);
-			$toll_allow = check_str($_POST["toll_allow"]);
-			$pin_numbers_enable = check_str($_POST["pin_numbers_enabled"]);
+			$dialplan_name = $_POST["dialplan_name"];
+			$dialplan_order = $_POST["dialplan_order"];
+			$dialplan_expression = $_POST["dialplan_expression"];
+			$prefix_number = $_POST["prefix_number"];
+			$condition_field_1 = $_POST["condition_field_1"];
+			$condition_expression_1 = $_POST["condition_expression_1"];
+			$condition_field_2 = $_POST["condition_field_2"];
+			$condition_expression_2 = $_POST["condition_expression_2"];
+			$gateway = $_POST["gateway"];
+			$limit = $_POST["limit"];
+			$accountcode = $_POST["accountcode"];
+			$toll_allow = $_POST["toll_allow"];
+			$pin_numbers_enable = $_POST["pin_numbers_enabled"];
 			if (strlen($pin_numbers_enable) == 0) { $pin_numbers_enable = "false"; }
 		//set the default type
 			$gateway_type = 'gateway';
@@ -104,7 +100,7 @@
 			}
 
 		//set the gateway_2 variable
-			$gateway_2 = check_str($_POST["gateway_2"]);
+			$gateway_2 = $_POST["gateway_2"];
 		//set the type to bridge
 			if (strtolower(substr($gateway_2, 0, 6)) == "bridge") {
 				$gateway_2_type = 'bridge';
@@ -137,7 +133,7 @@
 			}
 
 		//set the gateway_3 variable
-			$gateway_3 = check_str($_POST["gateway_3"]);
+			$gateway_3 = $_POST["gateway_3"];
 		//set the type to bridge
 			if (strtolower(substr($gateway_3, 0, 6)) == "bridge") {
 				$gateway_3_type = 'bridge';
@@ -169,14 +165,23 @@
 				$gateway_3_name = '';
 			}
 		//set additional variables
-			$dialplan_enabled = check_str($_POST["dialplan_enabled"]);
-			$dialplan_description = check_str($_POST["dialplan_description"]);
+			$dialplan_enabled = $_POST["dialplan_enabled"];
+			$dialplan_description = $_POST["dialplan_description"];
 		//set default to enabled
 			if (strlen($dialplan_enabled) == 0) { $dialplan_enabled = "true"; }
 	}
 
 //process the http form values
 	if (count($_POST) > 0 && strlen($_POST["persistformvar"]) == 0) {
+
+		//validate the token
+			$token = new token;
+			if (!$token->validate($_SERVER['PHP_SELF'])) {
+				message::add($text['message-invalid_token'],'negative');
+				header('Location: '.PROJECT_PATH.'/app/dialplans/dialplans.php?app_uuid=8c914ec3-9fc0-8ab5-4cda-6c9288bdc9a3');
+				exit;
+			}
+
 		//check for all required data
 			if (strlen($gateway) == 0) { $msg .= $text['message-provide'].": ".$text['label-gateway-name']."<br>\n"; }
 			//if (strlen($gateway_2) == 0) { $msg .= "Please provide: Alternat 1<br>\n"; }
@@ -621,15 +626,19 @@
 							$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_group'] = '0';
 						}
 
-						$y++;
-						$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_uuid'] = uuid();
-						$array['dialplans'][$x]['dialplan_details'][$y]['domain_uuid'] = $_SESSION['domain_uuid'];
-						$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_uuid'] = $dialplan_uuid;
-						$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_tag'] = 'action';
-						$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_type'] = 'sleep';
-						$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_data'] = '${sleep}';
-						$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_order'] = $y * 10;
-						$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_group'] = '0';
+						if (strlen($prefix_number) > 0) {
+							if ($_SESSION['cdr']['remove_prefix']['boolean'] == 'true') {
+								$y++;
+								$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_uuid'] = uuid();
+								$array['dialplans'][$x]['dialplan_details'][$y]['domain_uuid'] = $_SESSION['domain_uuid'];
+								$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_uuid'] = $dialplan_uuid;
+								$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_tag'] = 'action';
+								$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_type'] = 'set';
+								$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_data'] = 'prefix='.$prefix_number;
+								$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_order'] = $y * 10;
+								$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_group'] = '0';
+							}
+						}
 
 						if ($gateway_type == "transfer") { $dialplan_detail_type = 'transfer'; } else { $dialplan_detail_type = 'bridge'; }
 						$y++;
@@ -666,7 +675,6 @@
 							$array['dialplans'][$x]['dialplan_details'][$y]['dialplan_detail_group'] = '0';
 						}
 
-
 						unset($bridge_data);
 						unset($bridge_2_data);
 						unset($bridge_3_data);
@@ -684,6 +692,7 @@
 			$database->app_uuid = $app_uuid;
 			$database->save($array);
 			$message = $database->message;
+			unset($array);
 
 		//update the dialplan xml
 			$dialplans = new dialplan;
@@ -703,15 +712,14 @@
 			message::add($text['message-update']);
 			header("Location: ".PROJECT_PATH."/app/dialplans/dialplans.php?app_uuid=8c914ec3-9fc0-8ab5-4cda-6c9288bdc9a3");
 			return;
-	} //end if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0)
+	}
 
 //get the domains
 	$sql = "select * from v_domains ";
 	$sql .= "where domain_enabled = 'true' ";
-	$prep_statement = $db->prepare(check_sql($sql));
-	$prep_statement->execute();
-	$domains = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-	unset ($prep_statement, $sql);
+	$database = new database;
+	$domains = $database->select($sql, null, 'all');
+	unset($sql);
 
 //get the gateways
 	$sql = "select * from v_gateways ";
@@ -720,23 +728,31 @@
 		$sql .= "order by domain_uuid ";
 	}
 	else {
-		$sql .= "and domain_uuid = '$domain_uuid' ";
+		$sql .= "and domain_uuid = :domain_uuid ";
+		$parameters['domain_uuid'] = $domain_uuid;
 	}
-	$prep_statement = $db->prepare(check_sql($sql));
-	$prep_statement->execute();
-	$gateways = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-	unset ($prep_statement, $sql);
+	$database = new database;
+	$gateways = $database->select($sql, $parameters, 'all');
+	unset($sql, $parameters);
 
 //get the bridges
 	if (permission_exists('bridge_view')) {
 		$sql = "select * from v_bridges ";
 		$sql .= "where bridge_enabled = 'true' ";
-		$sql .= "and domain_uuid = '$domain_uuid' ";
-		$prep_statement = $db->prepare(check_sql($sql));
-		$prep_statement->execute();
-		$bridges = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-		unset ($prep_statement, $sql);
+		$sql .= "and domain_uuid = :domain_uuid ";
+		$parameters['domain_uuid'] = $domain_uuid;
+		$database = new database;
+		$bridges = $database->select($sql, $parameters, 'all');
+		unset($sql, $parameters);
 	}
+
+//create token
+	$object = new token;
+	$token = $object->create($_SERVER['PHP_SELF']);
+
+//show the header
+	$document['title'] = $text['title-dialplan-outbound-add'];
+	require_once "resources/header.php";
 
 ?>
 
@@ -772,33 +788,28 @@ function type_onchange(dialplan_detail_type) {
 </script>
 
 <?php
+
 //show the content
-	echo "<form method='post' name='frm' action=''>\n";
-	echo "<table width=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\n";
-	echo "	<tr>\n";
-	echo "		<td align='left'>\n";
-	echo "			<span class=\"title\">".$text['label-outbound-routes']."</span>\n";
-	echo "		</td>\n";
-	echo "		<td align='right'>\n";
-	echo "			<input type='button' class='btn' name='' alt='".$text['button-back']."' onclick=\"window.location='".PROJECT_PATH."/app/dialplans/dialplans.php?app_uuid=8c914ec3-9fc0-8ab5-4cda-6c9288bdc9a3'\" value='".$text['button-back']."'>\n";
-	echo "			<input type='submit' name='submit' class='btn' value='".$text['button-save']."'>\n";
-	echo "		</td>\n";
-	echo "	</tr>\n";
-	echo "	<tr>\n";
-	echo "		<td align='left' colspan='2'>\n";
-	echo "			<br>";
-	echo "			".$text['description-outbound-routes']."\n";
-	echo "		</td>\n";
-	echo "	</tr>\n";
-	echo "	</table>";
-	echo "<br />\n";
+	echo "<form method='post' name='frm' id='frm'>\n";
+
+	echo "<div class='action_bar' id='action_bar'>\n";
+	echo "	<div class='heading'><b>".$text['label-outbound-routes']."</b></div>\n";
+	echo "	<div class='actions'>\n";
+	echo button::create(['type'=>'button','label'=>$text['button-back'],'icon'=>$_SESSION['theme']['button_icon_back'],'id'=>'btn_back','link'=>PROJECT_PATH.'/app/dialplans/dialplans.php?app_uuid=8c914ec3-9fc0-8ab5-4cda-6c9288bdc9a3']);
+	echo button::create(['type'=>'submit','label'=>$text['button-save'],'icon'=>$_SESSION['theme']['button_icon_save'],'id'=>'btn_save','style'=>'margin-left: 15px;']);
+	echo "	</div>\n";
+	echo "	<div style='clear: both;'></div>\n";
+	echo "</div>\n";
+
+	echo $text['description-outbound-routes']."\n";
+	echo "<br /><br />\n";
 
 	echo "<table width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
 	echo "<tr>\n";
-	echo "<td class='vncellreq' valign='top' align='left' nowrap>\n";
+	echo "<td width='30%' class='vncellreq' valign='top' align='left' nowrap>\n";
 	echo "	".$text['label-gateway']."\n";
 	echo "</td>\n";
-	echo "<td class='vtable' align='left'>\n";
+	echo "<td width='70%' class='vtable' align='left'>\n";
 
 	if (if_group("superadmin")) {
 		echo "<script>\n";
@@ -1199,18 +1210,14 @@ function type_onchange(dialplan_detail_type) {
 	echo "</td>\n";
 	echo "</tr>\n";
 
-	echo "<tr>\n";
-	echo "	<td colspan='5' align='right'>\n";
-	if ($action == "update") {
-		echo "	<input type='hidden' name='dialplan_uuid' value='".escape($dialplan_uuid)."'>\n";
-	}
-	echo "		<br>";
-	echo "		<input type='submit' name='submit' class='btn' value='".$text['button-save']."'>\n";
-	echo "	</td>\n";
-	echo "</tr>";
-
 	echo "</table>";
 	echo "<br><br>";
+
+	if ($action == "update") {
+		echo "<input type='hidden' name='dialplan_uuid' value='".escape($dialplan_uuid)."'>\n";
+	}
+	echo "<input type='hidden' name='".$token['name']."' value='".$token['hash']."'>\n";
+
 	echo "</form>";
 
 //show the footer

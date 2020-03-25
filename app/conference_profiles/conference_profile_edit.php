@@ -3,9 +3,9 @@
 //includes
 	require_once "root.php";
 	require_once "resources/require.php";
+	require_once "resources/check_auth.php";
 
 //check permissions
-	require_once "resources/check_auth.php";
 	if (permission_exists('conference_profile_add') || permission_exists('conference_profile_edit')) {
 		//access granted
 	}
@@ -19,9 +19,9 @@
 	$text = $language->get();
 
 //action add or update
-	if (isset($_REQUEST["id"])) {
+	if (is_uuid($_REQUEST["id"])) {
 		$action = "update";
-		$conference_profile_uuid = check_str($_REQUEST["id"]);
+		$conference_profile_uuid = $_REQUEST["id"];
 	}
 	else {
 		$action = "add";
@@ -29,24 +29,33 @@
 
 //get http post variables and set them to php variables
 	if (count($_POST) > 0) {
-		$profile_name = check_str($_POST["profile_name"]);
-		$profile_enabled = check_str($_POST["profile_enabled"]);
-		$profile_description = check_str($_POST["profile_description"]);
+		$profile_name = $_POST["profile_name"];
+		$profile_enabled = $_POST["profile_enabled"];
+		$profile_description = $_POST["profile_description"];
 	}
 //check to see if the http post exists
 	if (count($_POST) > 0 && strlen($_POST["persistformvar"]) == 0) {
 	
 		//get the uuid
 			if ($action == "update") {
-				$conference_profile_uuid = check_str($_POST["conference_profile_uuid"]);
+				$conference_profile_uuid = $_POST["conference_profile_uuid"];
 			}
 	
+		//validate the token
+			$token = new token;
+			if (!$token->validate($_SERVER['PHP_SELF'])) {
+				message::add($text['message-invalid_token'],'negative');
+				header('Location: conference_profiles.php');
+				exit;
+			}
+
 		//check for all required data
 			$msg = '';
 			if (strlen($profile_name) == 0) { $msg .= $text['message-required']." ".$text['label-profile_name']."<br>\n"; }
 			if (strlen($profile_enabled) == 0) { $msg .= $text['message-required']." ".$text['label-profile_enabled']."<br>\n"; }
 			//if (strlen($profile_description) == 0) { $msg .= $text['message-required']." ".$text['label-profile_description']."<br>\n"; }
 			if (strlen($msg) > 0 && strlen($_POST["persistformvar"]) == 0) {
+				$document['title'] = $text['title-conference_profile'];
 				require_once "resources/header.php";
 				require_once "resources/persist_form_var.php";
 				echo "<div align='center'>\n";
@@ -61,87 +70,80 @@
 	
 		//add or update the database
 			if ($_POST["persistformvar"] != "true") {
+
+				$array['conference_profiles'][0]['profile_name'] = $profile_name;
+				$array['conference_profiles'][0]['profile_enabled'] = $profile_enabled;
+				$array['conference_profiles'][0]['profile_description'] = $profile_description;
+
 				if ($action == "add" && permission_exists('conference_profile_add')) {
-					$sql = "insert into v_conference_profiles ";
-					$sql .= "(";
-					//$sql .= "domain_uuid, ";
-					$sql .= "conference_profile_uuid, ";
-					$sql .= "profile_name, ";
-					$sql .= "profile_enabled, ";
-					$sql .= "profile_description ";
-					$sql .= ")";
-					$sql .= "values ";
-					$sql .= "(";
-					//$sql .= "'$domain_uuid', ";
-					$sql .= "'".uuid()."', ";
-					$sql .= "'$profile_name', ";
-					$sql .= "'$profile_enabled', ";
-					$sql .= "'$profile_description' ";
-					$sql .= ")";
-					$db->exec(check_sql($sql));
-					unset($sql);
-	
+					$array['conference_profiles'][0]['conference_profile_uuid'] = uuid();
 					message::add($text['message-add']);
-					header("Location: conference_profiles.php");
-					return;
-	
-				} //if ($action == "add")
+				}
 	
 				if ($action == "update" && permission_exists('conference_profile_edit')) {
-					$sql = "update v_conference_profiles set ";
-					$sql .= "profile_name = '$profile_name', ";
-					$sql .= "profile_enabled = '$profile_enabled', ";
-					$sql .= "profile_description = '$profile_description' ";
-					$sql .= "where conference_profile_uuid = '$conference_profile_uuid'";
-					//$sql .= "and domain_uuid = '$domain_uuid' ";
-					$db->exec(check_sql($sql));
-					unset($sql);
-	
+					$array['conference_profiles'][0]['conference_profile_uuid'] = $conference_profile_uuid;
 					message::add($text['message-update']);
-					header("Location: conference_profiles.php");
-					return;
-	
-				} //if ($action == "update")
-			} //if ($_POST["persistformvar"] != "true")
-	} //(count($_POST)>0 && strlen($_POST["persistformvar"]) == 0)
+				}
+
+				if (is_uuid($array['conference_profiles'][0]['conference_profile_uuid'])) {
+					$database = new database;
+					$database->app_name = 'conference_profiles';
+					$database->app_uuid = 'c33e2c2a-847f-44c1-8c0d-310df5d65ba9';
+					$database->save($array);
+					unset($array);
+				}
+
+				header("Location: conference_profiles.php");
+				exit;
+
+			}
+	}
 
 //pre-populate the form
 	if (count($_GET) > 0 && $_POST["persistformvar"] != "true") {
-		$conference_profile_uuid = check_str($_GET["id"]);
+		$conference_profile_uuid = $_GET["id"];
 		$sql = "select * from v_conference_profiles ";
-		$sql .= "where conference_profile_uuid = '$conference_profile_uuid' ";
-		//$sql .= "and domain_uuid = '$domain_uuid' ";
-		$prep_statement = $db->prepare(check_sql($sql));
-		$prep_statement->execute();
-		$result = $prep_statement->fetchAll(PDO::FETCH_NAMED);
-
-		foreach ($result as &$row) {
+		$sql .= "where conference_profile_uuid = :conference_profile_uuid ";
+		//$sql .= "and domain_uuid = :domain_uuid ";
+		$parameters['conference_profile_uuid'] = $conference_profile_uuid;
+		//$parameters['domain_uuid'] = $_SESSION['domain_uuid'];
+		$database = new database;
+		$row = $database->select($sql, $parameters, 'row');
+		if (is_array($row) && sizeof($row) != 0) {
 			$profile_name = $row["profile_name"];
 			$profile_enabled = $row["profile_enabled"];
 			$profile_description = $row["profile_description"];
 		}
-		unset ($prep_statement);
+		unset($sql, $parameters);
 	}
 
+//create token
+	$object = new token;
+	$token = $object->create($_SERVER['PHP_SELF']);
+
 //show the header
+	$document['title'] = $text['title-conference_profile'];
 	require_once "resources/header.php";
 
 //show the content
-	echo "<form name='frm' id='frm' method='post' action=''>\n";
-	echo "<table width='100%'  border='0' cellpadding='0' cellspacing='0'>\n";
-	echo "<tr>\n";
-	echo "<td align='left' width='30%' nowrap='nowrap' valign='top'><b>".$text['title-conference_profile']."</b><br><br></td>\n";
-	echo "<td width='70%' align='right' valign='top'>\n";
-	echo "	<input type='button' class='btn' name='' alt='".$text['button-back']."' onclick=\"window.location='conference_profiles.php'\" value='".$text['button-back']."'>";
-	echo "	<input type='submit' name='submit' class='btn' value='".$text['button-save']."'>";
-	echo "</td>\n";
-	echo "</tr>\n";
+	echo "<form name='frm' id='frm' method='post'>\n";
+
+	echo "<div class='action_bar' id='action_bar'>\n";
+	echo "	<div class='heading'><b>".$text['title-conference_profile']."</b></div>\n";
+	echo "	<div class='actions'>\n";
+	echo button::create(['type'=>'button','label'=>$text['button-back'],'icon'=>$_SESSION['theme']['button_icon_back'],'id'=>'btn_back','collapse'=>'hide-xs','style'=>'margin-right: 15px;','link'=>'conference_profiles.php']);
+	echo button::create(['type'=>'submit','label'=>$text['button-save'],'icon'=>$_SESSION['theme']['button_icon_save'],'id'=>'btn_save','collapse'=>'hide-xs']);
+	echo "	</div>\n";
+	echo "	<div style='clear: both;'></div>\n";
+	echo "</div>\n";
+
+	echo "<table width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
 
 	echo "<tr>\n";
-	echo "<td class='vncellreq' valign='top' align='left' nowrap='nowrap'>\n";
+	echo "<td width='30%' class='vncellreq' valign='top' align='left' nowrap='nowrap'>\n";
 	echo "	".$text['label-profile_name']."\n";
 	echo "</td>\n";
-	echo "<td class='vtable' align='left'>\n";
+	echo "<td width='70%' class='vtable' align='left'>\n";
 	echo "	<input class='formfld' type='text' name='profile_name' maxlength='255' value=\"".escape($profile_name)."\">\n";
 	echo "<br />\n";
 	echo $text['description-profile_name']."\n";
@@ -154,19 +156,8 @@
 	echo "</td>\n";
 	echo "<td class='vtable' align='left'>\n";
 	echo "	<select class='formfld' name='profile_enabled'>\n";
-	echo "	<option value=''></option>\n";
-	if ($profile_enabled == "true") {
-		echo "	<option value='true' selected='selected'>".$text['label-true']."</option>\n";
-	}
-	else {
-		echo "	<option value='true'>".$text['label-true']."</option>\n";
-	}
-	if ($profile_enabled == "false") {
-		echo "	<option value='false' selected='selected'>".$text['label-false']."</option>\n";
-	}
-	else {
-		echo "	<option value='false'>".$text['label-false']."</option>\n";
-	}
+	echo "		<option value='true'>".$text['label-true']."</option>\n";
+	echo "		<option value='false' ".($profile_enabled == "false" ? "selected='selected'" : null).">".$text['label-false']."</option>\n";
 	echo "	</select>\n";
 	echo "<br />\n";
 	echo $text['description-profile_enabled']."\n";
@@ -182,18 +173,16 @@
 	echo "<br />\n";
 	echo $text['description-profile_description']."\n";
 	echo "</td>\n";
-	echo "</tr>\n";
-	echo "	<tr>\n";
-	echo "		<td colspan='2' align='right'>\n";
-	if ($action == "update") {
-		echo "				<input type='hidden' name='conference_profile_uuid' value='".escape($conference_profile_uuid)."'>\n";
-	}
-	echo "				<input type='submit' name='submit' class='btn' value='".$text['button-save']."'>\n";
-	echo "		</td>\n";
-	echo "	</tr>";
+
 	echo "</table>";
-	echo "</form>";
 	echo "<br /><br />";
+
+	if ($action == "update") {
+		echo "<input type='hidden' name='conference_profile_uuid' value='".escape($conference_profile_uuid)."'>\n";
+	}
+	echo "<input type='hidden' name='".$token['name']."' value='".$token['hash']."'>\n";
+
+	echo "</form>";
 
 	if ($action == "update") {
 		require "conference_profile_params.php";

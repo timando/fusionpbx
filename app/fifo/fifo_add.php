@@ -24,9 +24,11 @@
 	Mark J Crane <markjcrane@fusionpbx.com>
 	Luis Daniel Lucio Quiroz <dlucio@okay.com.mx>
 */
-include "root.php";
+require_once "root.php";
 require_once "resources/require.php";
 require_once "resources/check_auth.php";
+require_once "resources/paging.php";
+
 if (permission_exists('fifo_add')) {
 	//access granted
 }
@@ -39,29 +41,33 @@ else {
 	$language = new text;
 	$text = $language->get();
 
-//includes and title
-	require_once "resources/header.php";
-	$document['title'] = $text['title-queue_add'];
-	require_once "resources/paging.php";
-
 //get http values and set them as variables
 	if (count($_POST)>0) {
 		$order_by = $_GET["order_by"];
 		$order = $_GET["order"];
-		$extension_name = check_str($_POST["extension_name"]);
-		$queue_extension_number = check_str($_POST["queue_extension_number"]);
-		$agent_queue_extension_number = check_str($_POST["agent_queue_extension_number"]);
-		$agent_login_logout_extension_number = check_str($_POST["agent_login_logout_extension_number"]);
-		$dialplan_order = check_str($_POST["dialplan_order"]);
-		$pin_number = check_str($_POST["pin_number"]);
-		$profile = check_str($_POST["profile"]);
-		$flags = check_str($_POST["flags"]);
-		$dialplan_enabled = check_str($_POST["dialplan_enabled"]);
-		$dialplan_description = check_str($_POST["dialplan_description"]);
+		$extension_name = $_POST["extension_name"];
+		$queue_extension_number = $_POST["queue_extension_number"];
+		$agent_queue_extension_number = $_POST["agent_queue_extension_number"];
+		$agent_login_logout_extension_number = $_POST["agent_login_logout_extension_number"];
+		$dialplan_order = $_POST["dialplan_order"];
+		$pin_number = $_POST["pin_number"];
+		$profile = $_POST["profile"];
+		$flags = $_POST["flags"];
+		$dialplan_enabled = $_POST["dialplan_enabled"];
+		$dialplan_description = $_POST["dialplan_description"];
 		if (strlen($dialplan_enabled) == 0) { $dialplan_enabled = "true"; } //set default to enabled
 	}
 
 if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
+
+	//validate the token
+		$token = new token;
+		if (!$token->validate($_SERVER['PHP_SELF'])) {
+			message::add($text['message-invalid_token'],'negative');
+			header('Location: dialplans.php');
+			exit;
+		}
+
 	//check for all required data
 		if (strlen($domain_uuid) == 0) { $msg .= $text['message-required']."domain_uuid<br>\n"; }
 		if (strlen($extension_name) == 0) { $msg .= $text['message-required'].$text['label-name']."<br>\n"; }
@@ -95,7 +101,7 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 			$dialplan_uuid = uuid();
 			$dialplan_context = $_SESSION['context'];
 			dialplan_add($domain_uuid, $dialplan_uuid, $extension_name, $dialplan_order, $dialplan_context, $dialplan_enabled, $dialplan_description, $app_uuid);
-			if (strlen($dialplan_uuid) > 0) {
+			if (is_uuid($dialplan_uuid)) {
 				//set the destination number
 					$dialplan_detail_tag = 'condition'; //condition, action, antiaction
 					$dialplan_detail_type = 'destination_number';
@@ -104,19 +110,18 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 					$dialplan_detail_group = '1';
 					if ((strlen($agent_queue_extension_number) > 0) || (strlen($agent_login_logout_extension_number) > 0)) {
 						$dialplan_detail_break = 'on-true';
-					} else {
+					}
+					else {
 						$dialplan_detail_break = '';
 					}
 					dialplan_detail_add($_SESSION['domain_uuid'], $dialplan_uuid, $dialplan_detail_tag, $dialplan_detail_order, $dialplan_detail_group, $dialplan_detail_type, $dialplan_detail_data, $dialplan_detail_break);
 				//set the hold music
-					//if (strlen($hold_music) > 0) {
-						$dialplan_detail_tag = 'action'; //condition, action, antiaction
-						$dialplan_detail_type = 'set';
-						$dialplan_detail_data = 'fifo_music=$${hold_music}';
-						$dialplan_detail_order = '001';
-						$dialplan_detail_group = '1';
-						dialplan_detail_add($_SESSION['domain_uuid'], $dialplan_uuid, $dialplan_detail_tag, $dialplan_detail_order, $dialplan_detail_group, $dialplan_detail_type, $dialplan_detail_data);
-					//}
+					$dialplan_detail_tag = 'action'; //condition, action, antiaction
+					$dialplan_detail_type = 'set';
+					$dialplan_detail_data = 'fifo_music=$${hold_music}';
+					$dialplan_detail_order = '001';
+					$dialplan_detail_group = '1';
+					dialplan_detail_add($_SESSION['domain_uuid'], $dialplan_uuid, $dialplan_detail_tag, $dialplan_detail_order, $dialplan_detail_group, $dialplan_detail_type, $dialplan_detail_data);
 				//action answer
 					$dialplan_detail_tag = 'action'; //condition, action, antiaction
 					$dialplan_detail_type = 'answer';
@@ -136,7 +141,7 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 					$dialplan_detail_group = '1';
 					dialplan_detail_add($_SESSION['domain_uuid'], $dialplan_uuid, $dialplan_detail_tag, $dialplan_detail_order, $dialplan_detail_group, $dialplan_detail_type, $dialplan_detail_data);
 			}
-	} //end if queue_extension_number
+	}
 
 
 	// Caller Queue / Agent Queue
@@ -152,7 +157,7 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 		//</extension>
 		//--------------------------------------------------------
 			$queue_name = $extension_name."_agent@\${domain_name}";
-			if (strlen($dialplan_uuid) > 0) {
+			if (is_uuid($dialplan_uuid)) {
 				//set the destination number
 					$dialplan_detail_tag = 'condition'; //condition, action, antiaction
 					$dialplan_detail_type = 'destination_number';
@@ -161,19 +166,18 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 					$dialplan_detail_group = '2';
 					if (strlen($agent_login_logout_extension_number) > 0) {
 						$dialplan_detail_break = 'on-true';
-					} else {
+					}
+					else {
 						$dialplan_detail_break = '';
 					}
 					dialplan_detail_add($_SESSION['domain_uuid'], $dialplan_uuid, $dialplan_detail_tag, $dialplan_detail_order, $dialplan_detail_group, $dialplan_detail_type, $dialplan_detail_data, $dialplan_detail_break);
 				//set the hold music
-					//if (strlen($hold_music) > 0) {
-						$dialplan_detail_tag = 'action'; //condition, action, antiaction
-						$dialplan_detail_type = 'set';
-						$dialplan_detail_data = 'fifo_music=$${hold_music}';
-						$dialplan_detail_order = '001';
-						$dialplan_detail_group = '2';
-						dialplan_detail_add($_SESSION['domain_uuid'], $dialplan_uuid, $dialplan_detail_tag, $dialplan_detail_order, $dialplan_detail_group, $dialplan_detail_type, $dialplan_detail_data);
-					//}
+					$dialplan_detail_tag = 'action'; //condition, action, antiaction
+					$dialplan_detail_type = 'set';
+					$dialplan_detail_data = 'fifo_music=$${hold_music}';
+					$dialplan_detail_order = '001';
+					$dialplan_detail_group = '2';
+					dialplan_detail_add($_SESSION['domain_uuid'], $dialplan_uuid, $dialplan_detail_tag, $dialplan_detail_order, $dialplan_detail_group, $dialplan_detail_type, $dialplan_detail_data);
 				//action answer
 					$dialplan_detail_tag = 'action'; //condition, action, antiaction
 					$dialplan_detail_type = 'answer';
@@ -208,7 +212,7 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 		//</extension>
 		//--------------------------------------------------------
 			$queue_name = $extension_name."@\${domain_name}";
-			if (strlen($dialplan_uuid) > 0) {
+			if (is_uuid($dialplan_uuid)) {
 				//set the destination number
 					$dialplan_detail_tag = 'condition'; //condition, action, antiaction
 					$dialplan_detail_type = 'destination_number';
@@ -280,36 +284,38 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 		header("Location: ".PROJECT_PATH."/app/dialplans/dialplans.php?app_uuid=16589224-c876-aeb3-f59f-523a1c0801f7");
 		return;
 
-} //end if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0)
+}
+
+//create token
+	$object = new token;
+	$token = $object->create($_SERVER['PHP_SELF']);
+
+//includes and title
+	require_once "resources/header.php";
+	$document['title'] = $text['title-queue_add'];
 
 //show the content
-	echo "<form method='post' name='frm' action=''>\n";
-	echo " 	<table width=\"100%\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">\n";
-	echo "	<tr>\n";
-	echo "		<td align='left'><span class=\"vexpl\"><span class='title'>".$text['header-queue_add']."</span></span></td>\n";
-	echo "		<td align='right'>\n";
-	echo "			<input type='button' class='btn' name='' alt='".$text['button-back']."' onclick=\"window.location='".PROJECT_PATH."/app/dialplans/dialplans.php?app_uuid=16589224-c876-aeb3-f59f-523a1c0801f7'\" value='".$text['button-back']."'>\n";
-	echo "			<input type='submit' name='submit' class='btn' value='".$text['button-save']."'>\n";
-	echo "		</td>\n";
-	echo "	</tr>\n";
-	echo "	<tr>\n";
-	echo "		<td align='left' colspan='2'>\n";
-	echo "			<span class=\"vexpl\">\n";
-	echo "			".$text['description-queue_add']."\n";
-	echo "			</span>\n";
-	echo "		</td>\n";
-	echo "	</tr>\n";
-	echo "	</table>";
+	echo "<form method='post' name='frm' id='frm'>\n";
 
-	echo "<br />\n";
-	echo "<br />\n";
+	echo "<div class='action_bar' id='action_bar'>\n";
+	echo "	<div class='heading'><b>".$text['header-queue_add']."</b></div>\n";
+	echo "	<div class='actions'>\n";
+	echo button::create(['type'=>'button','label'=>$text['button-back'],'icon'=>$_SESSION['theme']['button_icon_back'],'id'=>'btn_back','style'=>'margin-right: 15px;','link'=>PROJECT_PATH.'/app/dialplans/dialplans.php?app_uuid=16589224-c876-aeb3-f59f-523a1c0801f7']);
+	echo button::create(['type'=>'submit','label'=>$text['button-save'],'icon'=>$_SESSION['theme']['button_icon_save'],'id'=>'btn_save']);
+	echo "	</div>\n";
+	echo "	<div style='clear: both;'></div>\n";
+	echo "</div>\n";
 
-	echo "	<table width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
+	echo $text['description-queue_add']."\n";
+	echo "<br /><br />\n";
+
+	echo "<table width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
+
 	echo "	<tr>\n";
-	echo "	<td class='vncellreq' valign='top' align='left' nowrap>\n";
+	echo "	<td width='30%' class='vncellreq' valign='top' align='left' nowrap>\n";
 	echo "		".$text['label-name']."\n";
 	echo "	</td>\n";
-	echo "	<td class='vtable' align='left'>\n";
+	echo "	<td width='70%' class='vtable' align='left'>\n";
 	echo "		<input class='formfld' type='text' name='extension_name' maxlength='255' value=\"$extension_name\" required='required'>\n";
 	echo "		<br />\n";
 	echo "		".$text['description-name']."\n";
@@ -333,8 +339,8 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 	echo "</td>\n";
 	echo "<td class='vtable' align='left'>\n";
 	echo "	<select name='dialplan_order' class='formfld'>\n";
-	$i=300;
-	while($i<=999) {
+	$i = 300;
+	while ($i <= 999) {
 		$selected = ($dialplan_order == $i) ? "selected" : null;
 		if (strlen($i) == 1) { echo "<option value='00$i' ".$selected.">00$i</option>\n"; }
 		if (strlen($i) == 2) { echo "<option value='0$i' ".$selected.">0$i</option>\n"; }
@@ -381,21 +387,19 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 	echo "</td>\n";
 	echo "</tr>\n";
 
-	echo "<tr>\n";
-	echo "<td class='vtable' valign='top' align='left' nowrap>\n";
-	echo "	<br /><br />\n";
-	echo "	<b>".$text['header-agent_details']."</b>\n";
-	echo "</td>\n";
-	echo "<td class='vtable' align='left'>\n";
-	echo "    &nbsp\n";
-	echo "</td>\n";
-	echo "</tr>\n";
+	echo "</table>\n";
+	echo "<br><br>\n";
+
+	echo "<b>".$text['header-agent_details']."</b>\n";
+	echo "<br /><br />\n";
+
+	echo "<table width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
 
 	echo "<tr>\n";
 	echo "<td width='30%' class='vncell' valign='top' align='left' nowrap>\n";
 	echo "    ".$text['label-agent_queue_extension']."\n";
 	echo "</td>\n";
-	echo "<td class='vtable' align='left'>\n";
+	echo "<td width='70%' class='vtable' align='left'>\n";
 	echo "    <input class='formfld' type='text' name='agent_queue_extension_number' maxlength='255' min='0' step='1' value=\"$agent_queue_extension_number\">\n";
 	echo "<br />\n";
 	echo $text['description-agent_queue_extension']."\n";
@@ -412,20 +416,15 @@ if (count($_POST)>0 && strlen($_POST["persistformvar"]) == 0) {
 	echo $text['description-agent_loginout_extension']."\n";
 	echo "</td>\n";
 	echo "</tr>\n";
-	echo "</table>\n";
 
-	echo "<table width='100%' border='0' cellpadding='0' cellspacing='0'>\n";
-	echo "<tr>\n";
-	echo "	<td colspan='5' align='right'>\n";
+	echo "</table>\n";
+	echo "<br><br>\n";
+
 	if ($action == "update") {
-		echo "	<input type='hidden' name='dialplan_uuid' value='$dialplan_uuid'>\n";
+		echo "<input type='hidden' name='dialplan_uuid' value='$dialplan_uuid'>\n";
 	}
-	echo "		<br>";
-	echo "		<input type='submit' name='submit' class='btn' value='".$text['button-save']."'>\n";
-	echo "	</td>\n";
-	echo "</tr>";
-	echo "</table>";
-	echo "<br><br>";
+	echo "<input type='hidden' name='".$token['name']."' value='".$token['hash']."'>\n";
+
 	echo "</form>";
 
 //show the footer
