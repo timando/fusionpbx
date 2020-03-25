@@ -57,6 +57,7 @@ include "root.php";
 			public $app_name;
 			public $app_uuid;
 			public $domain_uuid;
+			private static $dbconn = null;
 
 			/**
 			 * Called when the object is created
@@ -81,6 +82,10 @@ include "root.php";
 			 * Connect to the database
 			 */
 			public function connect() {
+				if (self::$dbconn!==null){
+					$this->db = self::$dbconn;
+					return;
+				}
 
 				if (strlen($this->db_name) == 0) {
 					//include config.php
@@ -221,6 +226,7 @@ include "root.php";
 							echo 'Connection failed: ' . $e->getMessage();
 						}
 				}
+				self::$dbconn = $this->db;
 			}
 
 			public function tables() {
