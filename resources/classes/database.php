@@ -131,6 +131,7 @@ include "root.php";
 						if (!isset($this->host) && isset($db_host)) { $this->host = $db_host; }
 						if (!isset($this->port) && isset($db_port)) { $this->port = $db_port; }
 						if (!isset($this->db_name) && isset($db_name)) { $this->db_name = $db_name; }
+						if (!isset($this->db_cert_authority) && isset($db_cert_authority)) { $this->db_cert_authority = $db_cert_authority; }
 						if (!isset($this->db_secure) && isset($db_secure)) {
 							$this->db_secure = $db_secure;
 						}
