@@ -61,7 +61,7 @@
 			if #dsn_callcenter > 0 then
 				table.insert(xml, [[                            <param name="odbc-dsn" value="]]..dsn_callcenter..[["/>]]);
 			elseif #dsn > 0 then
-				table.insert(xml, [[                            <param name="odbc-dsn" value="]]..database["switch"]..[["/>]]);
+				table.insert(xml, [[                            <param name="odbc-dsn" value="]]..dsn..[["/>]]);
 			end
 			-- table.insert(xml, [[                          <param name="dbname" value="]]..database_dir..[[/call_center.db"/>]]);
 			table.insert(xml, [[                    </settings>]]);
