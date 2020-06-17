@@ -94,7 +94,7 @@ include "root.php";
 			 */
 			public function connect() {
 				$cachename=$this->db_name??'fusionpbx';
-				// If this connection isn't cached, connect and create a query cache
+				// If this connection is cached, return it immediately
 				if (isset(self::$dbconn[$cachename])) {
 					$this->db = self::$dbconn[$cachename];
 					return;
