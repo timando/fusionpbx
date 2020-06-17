@@ -89,13 +89,13 @@ if (!class_exists('schema')) {
 										}
 										if (isset($field['key']) && isset($field['key']['type']) && ($field['key']['type'] == "foreign")) {
 											if ($this->db_type == "pgsql") {
-												//$sql .= " references ".$field['key']['reference']['table']."(".$field['key']['reference']['field'].")";
+												$sql .= " references ".$field['key']['reference']['table']."(".$field['key']['reference']['field'].")";
 											}
 											if ($this->db_type == "sqlite") {
-												//$sql .= " references ".$field['key']['reference']['table']."(".$field['key']['reference']['field'].")";
+												$sql .= " references ".$field['key']['reference']['table']."(".$field['key']['reference']['field'].")";
 											}
 											if ($this->db_type == "mysql") {
-												//$sql .= " references ".$field['key']['reference']['table']."(".$field['key']['reference']['field'].")";
+												$sql .= " references ".$field['key']['reference']['table']."(".$field['key']['reference']['field'].")";
 											}
 										}
 										$field_count++;
