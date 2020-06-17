@@ -33,7 +33,7 @@
 		$apps[$x]['permissions'][$y]['groups'][] = 'superadmin';
 
 	//Call Recordings
-		$y = 2;
+		$y = 0;
 		$apps[$x]['db'][$y]['table']['name'] = 'v_call_recordings';
 		$apps[$x]['db'][$y]['table']['parent'] = '';
 		$z = 0;
